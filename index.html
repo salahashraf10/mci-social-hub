@@ -18,21 +18,25 @@
 </head>
 <body>
 
-<!-- ==================== TICKER ==================== -->
+<!-- TICKER -->
 <div class="ticker" id="ticker">
   <div class="ticker-inner" id="tickerInner"><span>مرحباً بكم في MCI Social Hub — الفرقة الثانية</span></div>
 </div>
 
-<!-- ==================== HEADER ==================== -->
+<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
-    <div class="brand" id="brandHome">
-      <div class="brand-logo">MCI</div>
-      <div class="brand-text">
-        <strong>MCI Social Hub</strong>
-        <small>الفرقة الثانية — معهد التسويق والتجارة ونظم المعلومات</small>
+    <div class="flex center gap-2">
+      <button class="icon-btn" id="hamburgerBtn" title="القائمة">☰</button>
+      <div class="brand" id="brandHome">
+        <div class="brand-logo">MCI</div>
+        <div class="brand-text">
+          <strong>MCI Social Hub</strong>
+          <small>الفرقة الثانية</small>
+        </div>
       </div>
     </div>
+    
     <nav class="header-nav" id="desktopNav">
       <a class="nav-link active" data-page="home">الرئيسية</a>
       <a class="nav-link" data-page="study">المذاكرة</a>
@@ -41,11 +45,12 @@
       <a class="nav-link" data-page="leaderboard">لوحة الشرف</a>
       <a class="nav-link" data-page="coming">قريباً</a>
     </nav>
+
     <div class="header-actions">
-      <button class="icon-btn" id="notifBtn" title="الإشعارات" style="position:relative">تنبيه<span class="notif-badge hidden" id="notifCount">0</span></button>
+      <button class="icon-btn" id="notifBtn" title="الإشعارات" style="position:relative">🔔<span class="notif-badge hidden" id="notifCount">0</span></button>
       <button class="btn btn-ghost btn-sm" id="rescueBtn">خطة الإنقاذ</button>
       <button class="btn btn-ghost btn-sm" id="leaderMsgBtn">رسالة الليدر</button>
-      <button class="icon-btn" id="themeToggle" title="الوضع الليلي/النهاري">ليلي</button>
+      <button class="icon-btn" id="themeToggle" title="الوضع الليلي/النهاري">🌙</button>
       <div class="user-chip" id="userChip">
         <div class="avatar" id="userAvatar">ز</div>
         <span class="user-name" id="userNameDisplay">زائر</span>
@@ -55,13 +60,41 @@
   </div>
 </header>
 
-<!-- ==================== SYNC INDICATOR ==================== -->
+<!-- SIDEBAR (HAMBURGER MENU) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>MCI Hub</h2>
+    <button class="modal-close" id="closeSidebarBtn">×</button>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="sidebar-avatar" id="sidebarAvatar">ز</div>
+    <div>
+      <strong id="sidebarName">زائر</strong>
+      <small class="text-muted" id="sidebarBranch">اختر مسارك</small>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="sidebar-link active" data-page="home">الرئيسية</a>
+    <a class="sidebar-link" data-page="study">المذاكرة</a>
+    <a class="sidebar-link" data-page="exams">الامتحانات</a>
+    <a class="sidebar-link" data-page="duel">تحدي 1v1</a>
+    <a class="sidebar-link" data-page="leaderboard">لوحة الشرف</a>
+    <a class="sidebar-link" data-page="coming">قريباً</a>
+    <hr class="sidebar-divider">
+    <a class="sidebar-link" id="sidebarProfile">ملفي الشخصي</a>
+    <a class="sidebar-link" id="sidebarWrongs">أخطائي السابقة</a>
+    <a class="sidebar-link" id="sidebarZtona">الزتونة والتوقعات</a>
+  </nav>
+</aside>
+
+<!-- SYNC -->
 <div class="sync-indicator" id="syncIndicator">
   <span class="sync-dot" id="syncDot"></span>
   <span id="syncText">جاري الاتصال...</span>
 </div>
 
-<!-- ==================== RESUME BANNER ==================== -->
+<!-- RESUME BANNER -->
 <div class="resume-banner hidden" id="resumeBanner">
   <div class="resume-banner-inner">
     <div class="resume-banner-text" id="resumeBannerText">لديك امتحان غير مكتمل</div>
@@ -72,35 +105,37 @@
   </div>
 </div>
 
-<!-- ==================== WELCOME ==================== -->
+<!-- WELCOME -->
 <div class="welcome-screen" id="welcomeScreen">
   <div class="welcome-inner">
     <div class="welcome-logo">MCI</div>
     <h1>مرحباً بك في MCI Social Hub</h1>
-    <p>منصة تعليمية متكاملة لطلاب الفرقة الثانية — اختر مسارك للبدء</p>
-    <div class="path-choices">
-      <div class="path-card" id="registerCard">
-        <div class="path-icon">+</div>
-        <h3>حساب الطالب</h3>
-        <p>سجّل اسمك الثلاثي، اختر شعبتك، وأنشئ كوداً سرياً خاصاً لفتح كل الميزات</p>
-      </div>
+    <p>منصة تعليمية متكاملة لطلاب الفرقة الثانية</p>
+    
+    <div class="welcome-paths-3">
       <div class="path-card guest" id="guestCard">
         <div class="path-icon">?</div>
         <h3>الدخول كزائر</h3>
-        <p>تصفح المواد والمذاكرة فقط — الامتحانات ولوحة الشرف مقفولة</p>
+        <p>تصفح المواد والمذاكرة فقط</p>
       </div>
-    </div>
-    <div class="welcome-footer">
-      <button class="btn btn-ghost btn-sm" id="restoreAccountBtn">استرجاع حسابي</button>
-      <div class="mt-2 text-sm text-muted">مبادرة طلابية تحت إشراف الليدر صلاح أشرف</div>
+      <div class="path-card" id="registerCard">
+        <div class="path-icon">+</div>
+        <h3>إنشاء حساب جديد</h3>
+        <p>سجل بياناتك وأنشئ كودك السري</p>
+      </div>
+      <div class="path-card login" id="loginCard">
+        <div class="path-icon">→</div>
+        <h3>عندك حساب؟</h3>
+        <p>ادخل بالكود السري بتاعك</p>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ==================== MAIN APP ==================== -->
+<!-- MAIN APP -->
 <main class="container" id="mainApp" style="display:none;">
 
-  <!-- ============ HOME ============ -->
+  <!-- HOME -->
   <section id="page-home">
     <div class="hero">
       <div class="hero-badge">مبادرة طلابية رائدة تحت إشراف ليدر الدفعة: صلاح أشرف</div>
@@ -143,7 +178,7 @@
 
     <div class="study-timer-card">
       <h3 style="font-size:1.1rem;">تايمر مذاكرة الدفعة</h3>
-      <p class="study-timer-sub">25 دقيقة مذاكرة + 5 دقائق راحة — كلنا مع بعض</p>
+      <p class="study-timer-sub">25 دقيقة مذاكرة + 5 دقائق راحة</p>
       <div class="study-timer" id="studyTimerDisplay">25:00</div>
       <div class="flex center gap-2 wrap" style="justify-content:center;">
         <button class="btn btn-primary btn-sm" id="studyTimerStart">ابدأ</button>
@@ -166,39 +201,58 @@
 
     <div class="card mt-3">
       <h3 style="font-size:1.05rem;margin-bottom:6px;">اسأل صلاح — تواصل مع الليدر</h3>
-      <p class="text-sm text-muted mb-2">عندك مشكلة أو اقتراح؟ ابعتلنا بلاغ فوري يوصلك للّيدر</p>
+      <p class="text-sm text-muted mb-2">عندك مشكلة أو اقتراح؟ ابعتلنا بلاغ فوري</p>
       <button class="btn btn-primary" id="askSalahBtn">فتح نموذج البلاغ</button>
     </div>
 
     <h2 class="section-title mt-3">قريباً في المنصة</h2>
-    <p class="section-sub">ميزات جاري تجهيزها خصيصاً للدفعة</p>
     <div class="grid grid-3" id="comingGridHome"></div>
   </section>
 
-  <!-- ============ STUDY ============ -->
+  <!-- STUDY -->
   <section id="page-study" style="display:none;">
     <h2 class="section-title">المذاكرة التفاعلية</h2>
-    <p class="section-sub">ملخصات، بطاقات استذكار — كل ما تحتاجه للمراجعة</p>
+    <p class="section-sub">اختر مادة للبدء في المراجعة</p>
     <div class="grid grid-3" id="studySubjectGrid"></div>
   </section>
 
-  <!-- ============ EXAMS ============ -->
+  <!-- EXAMS -->
   <section id="page-exams" style="display:none;">
     <h2 class="section-title">محاكي الامتحانات</h2>
     <p class="section-sub">اختر المادة ونمط الامتحان</p>
     <div id="guestLockExams" class="guest-lock hidden">
-      <div class="lock-icon">مقفول</div>
+      <div class="lock-icon">🔒</div>
       <h3>الامتحانات مقفولة للزائر</h3>
-      <p>سجّل اسمك وكودك الشخصي في 5 ثوانٍ لفتح محاكي الامتحانات والدخول في لوحة الشرف</p>
+      <p>سجّل اسمك وكودك الشخصي لفتح محاكي الامتحانات</p>
       <button class="btn btn-primary" id="lockRegisterBtn">سجّل الآن</button>
     </div>
     <div class="grid grid-3" id="examSubjectGrid"></div>
   </section>
 
-  <!-- ============ DUEL ============ -->
+  <!-- SUBJECT DETAIL (SPA) -->
+  <section id="page-subject-detail" style="display:none;">
+    <div class="flex between center mb-3 wrap gap-2">
+      <div>
+        <button class="btn btn-ghost btn-sm mb-1" id="backFromSubject">← رجوع</button>
+        <h2 class="section-title" id="detailSubjectTitle">المادة</h2>
+        <p class="section-sub" id="detailSubjectDesc"></p>
+      </div>
+      <div class="flex gap-1">
+        <button class="btn btn-secondary" id="detailExamBtn">بدء امتحان</button>
+      </div>
+    </div>
+    <div class="tabs" id="detailTabs">
+      <div class="tab active" data-dtab="notes">الملخصات</div>
+      <div class="tab" data-dtab="flashcards">بطاقات الاستذكار</div>
+    </div>
+    <div id="detailNotesPanel"></div>
+    <div id="detailFlashcardsPanel" style="display:none;"></div>
+  </section>
+
+  <!-- DUEL -->
   <section id="page-duel" style="display:none;">
     <h2 class="section-title">مقارنة المستويات — تحدي 1v1</h2>
-    <p class="section-sub">حدي صديقك، جاوبوا نفس الـ 10 أسئلة في نفس اللحظة، الأسرع والأدق يكسب XP أكتر</p>
+    <p class="section-sub">حدي صديقك، جاوبوا نفس الـ 10 أسئلة في نفس اللحظة</p>
     <div class="duel-card">
       <h3>إنشاء تحدي جديد</h3>
       <p>اختر المادة، هنعمل كود تحدي تبعته لصاحبك — صالح لمدة 30 دقيقة</p>
@@ -225,29 +279,52 @@
     <div id="duelActiveWrap" class="mt-3"></div>
   </section>
 
-  <!-- ============ LEADERBOARD ============ -->
+  <!-- LEADERBOARD -->
   <section id="page-leaderboard" style="display:none;">
     <h2 class="section-title">لوحة الشرف</h2>
     <p class="section-sub">أفضل الطلاب في كل مادة</p>
     <div id="guestLockLeaderboard" class="guest-lock hidden">
-      <div class="lock-icon">مقفول</div>
+      <div class="lock-icon">🔒</div>
       <h3>لوحة الشرف مقفولة للزائر</h3>
-      <p>سجّل اسمك وكودك الشخصي في 5 ثوانٍ لفتح لوحة الشرف والدخول في المنافسة</p>
+      <p>سجّل اسمك وكودك الشخصي لفتح لوحة الشرف</p>
       <button class="btn btn-primary" id="lockRegisterBtn2">سجّل الآن</button>
     </div>
     <div id="leaderboardContent"></div>
   </section>
 
-  <!-- ============ COMING ============ -->
+  <!-- COMING -->
   <section id="page-coming" style="display:none;">
     <h2 class="section-title">قريباً</h2>
     <p class="section-sub">ميزات جاري تجهيزها وستُتاح للدفعة قريباً جداً</p>
     <div class="grid grid-3" id="comingGridFull"></div>
   </section>
 
+  <!-- PROFILE -->
+  <section id="page-profile" style="display:none;">
+    <h2 class="section-title">ملفي الشخصي</h2>
+    <p class="section-sub">إحصائياتك وبياناتك</p>
+    <div class="profile-card" id="profileCard"></div>
+    <h3 class="section-title mt-3" style="font-size:1.15rem;">إحصائياتي</h3>
+    <div class="grid grid-3" id="profileStats"></div>
+  </section>
+
+  <!-- WRONGS -->
+  <section id="page-wrongs" style="display:none;">
+    <h2 class="section-title">أخطائي السابقة</h2>
+    <p class="section-sub">الأسئلة اللي غلطت فيها — امتحن نفسك فيها لحد ما تثبتها</p>
+    <div class="grid grid-3" id="wrongsSubjectGrid"></div>
+  </section>
+
+  <!-- ZTONA -->
+  <section id="page-ztona" style="display:none;">
+    <h2 class="section-title">الزتونة والتوقعات</h2>
+    <p class="section-sub">أهم النقاط المتوقعة في كل مادة — بيتكرر في الفاينل</p>
+    <div class="grid grid-3" id="ztonaSubjectGrid"></div>
+  </section>
+
 </main>
 
-<!-- ==================== FOOTER ==================== -->
+<!-- FOOTER -->
 <footer class="footer" id="mainFooter" style="display:none;">
   <div class="footer-inner">
     <div class="footer-brand">MCI Social Hub</div>
@@ -259,12 +336,12 @@
   </div>
 </footer>
 
-<!-- ==================== TOASTS & LOADING ==================== -->
+<!-- TOASTS & LOADING -->
 <div class="toast-container" id="toastContainer"></div>
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">جاري إنشاء الحساب الخاص بك...</div>
+  <div class="loading-text" id="loadingText">جاري التحميل...</div>
   <div class="loading-sub">لحظات من فضلك</div>
   <div class="loading-progress"><div class="loading-progress-fill" id="loadingProgress"></div></div>
 </div>
@@ -303,24 +380,23 @@
       <div class="form-group">
         <label>الكود السري (4-6 أرقام)</label>
         <input type="password" class="form-control" id="regPin" placeholder="مثال: 1234" maxlength="6" inputmode="numeric" />
-        <div class="form-hint">هذا الكود سيُستخدم لاسترجاع حسابك من أي جهاز</div>
-        <div class="form-error" id="regPinErr">الكود يجب أن يكون من 4 إلى 6 أرقام</div>
+        <div class="form-error" id="regPinErr">الكود 4-6 أرقام</div>
       </div>
       <button class="btn btn-primary btn-block mt-2" id="registerSubmitBtn">إنشاء الحساب</button>
     </div>
   </div>
 </div>
 
-<div class="modal-backdrop" id="restoreModal">
+<div class="modal-backdrop" id="loginModal">
   <div class="modal">
-    <div class="modal-header"><h3>استرجاع الحساب</h3><button class="modal-close" data-close="restoreModal">×</button></div>
+    <div class="modal-header"><h3>عندك حساب؟</h3><button class="modal-close" data-close="loginModal">×</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label>الكود السري الخاص بك</label>
-        <input type="password" class="form-control" id="restorePin" placeholder="أدخل الكود" maxlength="6" inputmode="numeric" />
-        <div class="form-error" id="restorePinErr">الكود غير صحيح أو غير موجود</div>
+        <input type="password" class="form-control" id="loginPin" placeholder="أدخل الكود" maxlength="6" inputmode="numeric" />
+        <div class="form-error" id="loginPinErr">الكود غير صحيح أو غير موجود</div>
       </div>
-      <button class="btn btn-primary btn-block mt-2" id="restoreSubmitBtn">استرجاع الحساب</button>
+      <button class="btn btn-primary btn-block mt-2" id="loginSubmitBtn">دخول</button>
     </div>
   </div>
 </div>
@@ -338,20 +414,6 @@
         </select>
       </div>
       <button class="btn btn-secondary btn-block mt-2" id="guestEnterBtn">دخول كزائر</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="subjectModal">
-  <div class="modal modal-xl">
-    <div class="modal-header"><h3 id="subjectModalTitle">المادة</h3><button class="modal-close" data-close="subjectModal">×</button></div>
-    <div class="modal-body" id="subjectModalBody">
-      <div class="tabs" id="subjectTabs">
-        <div class="tab active" data-stab="notes">ملخصات</div>
-        <div class="tab" data-stab="flashcards">بطاقات استذكار</div>
-      </div>
-      <div id="studyNotesPanel"></div>
-      <div id="studyFlashcardsPanel" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -404,8 +466,8 @@
     <div class="modal-body">
       <div class="form-group"><label>الاسم</label><input type="text" class="form-control" id="reportName" /></div>
       <div class="form-group"><label>رقم الموبايل (واتساب)</label><input type="tel" class="form-control" id="reportPhone" placeholder="01xxxxxxxxx" /></div>
-      <div class="form-group"><label>المشكلة / الاقتراح</label><textarea class="form-control" id="reportMessage" placeholder="اكتب مشكلتك بالتفصيل..."></textarea></div>
-      <button class="btn btn-primary btn-block" id="reportSubmitBtn">إرسال البلاغ للّيدر</button>
+      <div class="form-group"><label>المشكلة / الاقتراح</label><textarea class="form-control" id="reportMessage" placeholder="اكتب مشكلتك..."></textarea></div>
+      <button class="btn btn-primary btn-block" id="reportSubmitBtn">إرسال البلاغ</button>
     </div>
   </div>
 </div>
@@ -441,7 +503,7 @@
 
 <div class="modal-backdrop" id="adminLoginModal">
   <div class="modal">
-    <div class="modal-header"><h3>لوحة التحكم — دخول</h3><button class="modal-close" data-close="adminLoginModal">×</button></div>
+    <div class="modal-header"><h3>لوحة التحكم</h3><button class="modal-close" data-close="adminLoginModal">×</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label>كلمة المرور</label>
@@ -460,12 +522,14 @@
       <div class="admin-tabs">
         <div class="admin-tab active" data-atab="exams">الامتحانات والأسئلة</div>
         <div class="admin-tab" data-atab="study">المذاكرة</div>
+        <div class="admin-tab" data-atab="ztona">الزتونة والتوقعات</div>
         <div class="admin-tab" data-atab="site">واجهة الموقع</div>
         <div class="admin-tab" data-atab="poll">التصويت</div>
         <div class="admin-tab" data-atab="stats">الإحصائيات والطلاب</div>
         <div class="admin-tab" data-atab="reports">البلاغات</div>
       </div>
 
+      <!-- Exams Panel -->
       <div class="admin-panel active" id="adminPanelExams">
         <div class="admin-section-title">إضافة سريعة ذكية — لصق نص</div>
         <div class="form-group"><label>المادة</label><select class="form-control" id="bulkSubject"></select></div>
@@ -476,7 +540,9 @@
         <button class="btn btn-ghost" id="bulkPreviewBtn">معاينة</button>
         <button class="btn btn-primary" id="bulkSubmitBtn">رفع وحفظ</button>
         <div id="bulkPreview" class="mt-2"></div>
+        
         <div style="height:1px;background:var(--border);margin:20px 0;"></div>
+        
         <div class="admin-section-title">إضافة فردية سريعة</div>
         <div class="form-row">
           <div class="form-group"><label>المادة</label><select class="form-control" id="singleSubject"></select></div>
@@ -508,19 +574,24 @@
         </div>
         <div class="form-group"><label>التعليل</label><input type="text" class="form-control" id="singleExplain" /></div>
         <button class="btn btn-primary" id="singleSubmitBtn">إضافة السؤال</button>
+        
         <div style="height:1px;background:var(--border);margin:20px 0;"></div>
+        
         <div class="admin-section-title">بنك الأسئلة الحالي</div>
         <div class="form-group"><select class="form-control" id="bankSubjectFilter"></select></div>
         <div id="qbankList"></div>
       </div>
 
+      <!-- Study Panel -->
       <div class="admin-panel" id="adminPanelStudy">
         <div class="admin-section-title">إضافة ملخص</div>
         <div class="form-group"><label>المادة</label><select class="form-control" id="notesSubject"></select></div>
         <div class="form-group"><label>عنوان الفصل</label><input type="text" class="form-control" id="notesChapter" /></div>
         <div class="form-group"><label>المحتوى</label><textarea class="form-control" id="notesContent"></textarea></div>
         <button class="btn btn-primary" id="notesSubmitBtn">إضافة الملخص</button>
+        
         <div style="height:1px;background:var(--border);margin:20px 0;"></div>
+        
         <div class="admin-section-title">إضافة بطاقة استذكار</div>
         <div class="form-group"><label>المادة</label><select class="form-control" id="flashSubject"></select></div>
         <div class="form-group"><label>المصطلح / السؤال</label><input type="text" class="form-control" id="flashTerm" /></div>
@@ -528,13 +599,27 @@
         <button class="btn btn-primary" id="flashSubmitBtn">إضافة البطاقة</button>
       </div>
 
+      <!-- Ztona Panel -->
+      <div class="admin-panel" id="adminPanelZtona">
+        <div class="admin-section-title">بنك الزتونة والتوقعات</div>
+        <div class="form-group"><label>المادة</label><select class="form-control" id="ztonaSubject"></select></div>
+        <div class="form-group"><label>نص النقطة / السؤال المتوقع</label><textarea class="form-control" id="ztonaText" rows="3"></textarea></div>
+        <div class="form-group"><label>مهم جداً وبيتكرر في الفاينل؟</label>
+          <select class="form-control" id="ztonaImportant"><option value="true">نعم (زتونة)</option><option value="false">لا</option></select>
+        </div>
+        <button class="btn btn-primary" id="ztonaSubmitBtn">إضافة للتوقعات</button>
+        <div style="height:1px;background:var(--border);margin:20px 0;"></div>
+        <div id="ztonaAdminList"></div>
+      </div>
+
+      <!-- Site Panel -->
       <div class="admin-panel" id="adminPanelSite">
         <div class="admin-section-title">شريط الأخبار</div>
         <div class="form-group"><label>رسائل (كل رسالة في سطر)</label><textarea class="form-control" id="tickerInput"></textarea></div>
         <button class="btn btn-primary" id="tickerSubmitBtn">تحديث الشريط</button>
         <div style="height:1px;background:var(--border);margin:20px 0;"></div>
         <div class="admin-section-title">إشعار منبثق للجميع</div>
-        <div class="form-group"><label>الرسالة</label><input type="text" class="form-control" id="broadcastMsg" placeholder="مثال: عاجل — تم رفع أسئلة القانون" /></div>
+        <div class="form-group"><label>الرسالة</label><input type="text" class="form-control" id="broadcastMsg" /></div>
         <button class="btn btn-secondary" id="broadcastBtn">إرسال الإشعار</button>
         <div style="height:1px;background:var(--border);margin:20px 0;"></div>
         <div class="admin-section-title">رسالة الليدر</div>
@@ -542,10 +627,11 @@
         <button class="btn btn-primary" id="leaderMsgSaveBtn">حفظ الرسالة</button>
       </div>
 
+      <!-- Poll Panel -->
       <div class="admin-panel" id="adminPanelPoll">
         <div class="admin-section-title">إنشاء تصويت جديد</div>
         <div class="form-group"><label>السؤال</label><input type="text" class="form-control" id="pollQuestion" /></div>
-        <div class="form-group"><label>الخيارات (كل خيار في سطر)</label><textarea class="form-control" id="pollOptions" placeholder="خيار 1&#10;خيار 2&#10;خيار 3"></textarea></div>
+        <div class="form-group"><label>الخيارات (كل خيار في سطر)</label><textarea class="form-control" id="pollOptions"></textarea></div>
         <div class="flex gap-1">
           <button class="btn btn-primary" id="pollCreateBtn">إنشاء التصويت</button>
           <button class="btn btn-ghost" id="pollResetBtn">إعادة ضبط التصويت</button>
@@ -553,10 +639,12 @@
         <div id="pollAdminResult" class="mt-2"></div>
       </div>
 
+      <!-- Stats Panel -->
       <div class="admin-panel" id="adminPanelStats">
         <div id="adminStatsContent"></div>
       </div>
 
+      <!-- Reports Panel -->
       <div class="admin-panel" id="adminPanelReports">
         <div class="admin-section-title">البلاغات الواردة</div>
         <div id="reportsList"></div>
