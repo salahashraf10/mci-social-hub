@@ -1,5 +1,5 @@
 /* =========================================================
-   MCI Social Hub — App Logic (Firestore + LocalStorage)
+   MCI Social Hub — App Logic
    ========================================================= */
 
 /* ============ Firebase ============ */
@@ -91,7 +91,7 @@ const Store = (() => {
 /* ============ Cloud Layer ============ */
 const Cloud = (() => {
   let online = firebaseReady;
-  const cache = { questions: {}, notes: {}, flashcards: {} };
+  const cache = { questions: {}, notes: {}, flashcards: {}, ztona: {} };
 
   function setOnline(v) {
     online = v;
@@ -160,6 +160,25 @@ const Cloud = (() => {
     try { await db.collection('flashcards').doc(sid).set({ list: arr, updatedAt: Date.now() }); setOnline(true); }
     catch (e) { setOnline(false); }
   }
+  
+  // Ztona
+  async function getZtona(sid) {
+    if (cache.ztona[sid]) return cache.ztona[sid];
+    const local = Store.get('ztona_' + sid, []);
+    if (!firebaseReady) { cache.ztona[sid] = local; return local; }
+    try {
+      const snap = await db.collection('ztona').doc(sid).get();
+      if (snap.exists) { const arr = snap.data().list || []; Store.set('ztona_' + sid, arr); cache.ztona[sid] = arr; setOnline(true); return arr; }
+      cache.ztona[sid] = local; setOnline(true); return local;
+    } catch (e) { setOnline(false); cache.ztona[sid] = local; return local; }
+  }
+  async function saveZtona(sid, arr) {
+    Store.set('ztona_' + sid, arr); cache.ztona[sid] = arr;
+    if (!firebaseReady) return;
+    try { await db.collection('ztona').doc(sid).set({ list: arr, updatedAt: Date.now() }); setOnline(true); }
+    catch (e) { setOnline(false); }
+  }
+
   async function getUsers() {
     const local = Store.get('users', []);
     if (!firebaseReady) return local;
@@ -305,7 +324,6 @@ const Cloud = (() => {
   }
   function watchDuel(code, callback) {
     if (!firebaseReady) {
-      // fallback: poll
       const iv = setInterval(async () => {
         const d = await getDuel(code);
         if (d) callback(d);
@@ -320,25 +338,20 @@ const Cloud = (() => {
     } catch (e) { return () => {}; }
   }
 
-  /* Heartbeat for live students */
   async function sendHeartbeat(userId) {
     if (!firebaseReady) return;
-    try {
-      await db.collection('heartbeats').doc(userId).set({ lastSeen: Date.now() });
-      setOnline(true);
-    } catch (e) { setOnline(false); }
+    try { await db.collection('heartbeats').doc(userId).set({ lastSeen: Date.now() }); setOnline(true); }
+    catch (e) { setOnline(false); }
   }
   async function getActiveStudentsCount() {
     if (!firebaseReady) return Math.floor(Math.random() * 30) + 15;
     try {
       const cutoff = Date.now() - 5 * 60 * 1000;
       const snap = await db.collection('heartbeats').where('lastSeen', '>', cutoff).get();
-      setOnline(true);
-      return snap.size;
+      setOnline(true); return snap.size;
     } catch (e) { setOnline(false); return 0; }
   }
 
-  /* Realtime watchers */
   function watchQuestions(cb) {
     if (!firebaseReady) return;
     try {
@@ -373,7 +386,7 @@ const Cloud = (() => {
 
   setOnline(online);
   return {
-    getQuestions, saveQuestions, getNotes, saveNotes, getFlashcards, saveFlashcards,
+    getQuestions, saveQuestions, getNotes, saveNotes, getFlashcards, saveFlashcards, getZtona, saveZtona,
     getUsers, saveUser, deleteUser, getTicker, saveTicker,
     getScores, saveScore, getNotifications, pushNotification,
     getConfig, saveConfig, deleteConfig, getReports, saveReport, resolveReport,
@@ -387,10 +400,10 @@ const Cloud = (() => {
 const AppState = {
   user: null,
   currentPage: 'home',
+  currentSubject: null,
   theme: 'light',
   activeExam: null,
   activeDuel: null,
-  adminLoggedIn: false,
   duelUnsubscribe: null
 };
 
@@ -452,46 +465,56 @@ async function registerUserWithLoading(name, branch, pin, text) {
   await new Promise(r => setTimeout(r, 300));
   overlay.classList.remove('active');
 
+  if (!name) return { ok: true }; // Used just for loading screen
+
   const users = await Cloud.getUsers();
   if (users.some(u => u.pin === pin)) return { ok: false, error: 'هذا الكود مستخدم بالفعل' };
-  const user = { id: uid(), name: name.trim(), branch, pin, role: 'student', createdAt: Date.now(), xp: 0 };
+  const user = { id: uid(), name: name.trim(), branch, pin, role: 'student', createdAt: Date.now(), xp: 0, wrongQuestions: [] };
   await Cloud.saveUser(user);
   return { ok: true, user };
 }
+
 async function registerUser(name, branch, pin) {
   if (!name.trim() || name.trim().split(/\s+/).length < 2) return { ok:false, error:'يرجى إدخال الاسم الثلاثي' };
   if (!/^\d{4,6}$/.test(pin)) return { ok:false, error:'الكود 4-6 أرقام' };
   return await registerUserWithLoading(name, branch, pin);
 }
-async function findUserByPin(pin) {
+
+async function loginUserByPin(pin) {
   const users = await Cloud.getUsers();
   return users.find(u => u.pin === pin) || null;
 }
-function loginUser(user) {
+
+function setSession(user) {
   AppState.user = user;
   Store.set('session', user);
   afterLogin();
 }
+
 function loginGuest(branch) {
-  AppState.user = { id: 'guest_' + uid(), name:'زائر', branch, pin:null, role:'guest', xp:0 };
+  AppState.user = { id: 'guest_' + uid(), name:'زائر', branch, pin:null, role:'guest', xp:0, wrongQuestions: [] };
   Store.set('session', AppState.user);
   afterLogin();
 }
+
 function logout() {
   AppState.user = null; Store.remove('session'); location.reload();
 }
+
 function restoreSession() {
   const s = Store.get('session', null);
   if (s) { AppState.user = s; return true; }
   return false;
 }
 
-/* ============ After login ============ */
+/* ============ After Login ============ */
 async function afterLogin() {
   $('#welcomeScreen').style.display = 'none';
   $('#mainApp').style.display = 'block';
   $('#mainFooter').style.display = 'block';
+  
   renderUserChip();
+  renderSidebarUser();
   renderSubjects();
   renderStudySubjects();
   renderExamSubjects();
@@ -507,11 +530,9 @@ async function afterLogin() {
   renderPoll();
   setRandomMotivation();
   checkNotifications();
-  restoreRescuePlan();
   startHeartbeat();
   updateLiveStudentsCount();
 
-  // Live watches
   Cloud.watchQuestions(() => {
     renderSubjects();
     renderStudySubjects();
@@ -520,7 +541,6 @@ async function afterLogin() {
   Cloud.watchTicker(arr => renderTicker(arr));
   Cloud.watchNotifications(arr => updateNotifBadge());
 
-  // Load leader message
   const savedMsg = await Cloud.getConfig('leaderMessage', null);
   if (savedMsg) {
     $('#leaderMessageContent').innerHTML = savedMsg.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('');
@@ -529,7 +549,7 @@ async function afterLogin() {
   }
 }
 
-/* ============ User chip ============ */
+/* ============ UI Rendering ============ */
 function renderUserChip() {
   if (!AppState.user) return;
   const isGuest = AppState.user.role === 'guest';
@@ -539,13 +559,17 @@ function renderUserChip() {
     $('#xpBadge').textContent = (AppState.user.xp || 0) + ' XP';
     $('#xpBadge').classList.remove('hidden');
   }
-  $('#userChip').onclick = () => {
-    if (isGuest) openModal('registerModal');
-    else if (confirm('تسجيل الخروج؟')) logout();
-  };
+  $('#userChip').onclick = () => { if (isGuest) openModal('registerModal'); else if (confirm('تسجيل الخروج؟')) logout(); };
 }
 
-/* ============ Guest restrictions ============ */
+function renderSidebarUser() {
+  if (!AppState.user) return;
+  const isGuest = AppState.user.role === 'guest';
+  $('#sidebarAvatar').textContent = isGuest ? 'ز' : (AppState.user.name.trim().charAt(0) || 'ط');
+  $('#sidebarName').textContent = AppState.user.name;
+  $('#sidebarBranch').textContent = APP_DATA.branches[AppState.user.branch]?.name || '';
+}
+
 function applyGuestRestrictions() {
   const isGuest = AppState.user?.role === 'guest';
   if (isGuest) {
@@ -556,12 +580,14 @@ function applyGuestRestrictions() {
     $('#duelCreateBtn').disabled = true;
     $('#duelJoinBtn').disabled = true;
     $('#askSalahBtn').disabled = true;
-    $('#nightBeforeBtn')?.setAttribute('disabled','');
-    $('#rescueStartBtn')?.setAttribute('disabled','');
+    $('#sidebarWrongs').style.display = 'none';
+    $('#sidebarZtona').style.display = 'none';
   } else {
     $('#examSubjectGrid').style.display = 'grid';
     $('#guestLockExams').classList.add('hidden');
     $('#guestLockLeaderboard').classList.add('hidden');
+    $('#sidebarWrongs').style.display = 'block';
+    $('#sidebarZtona').style.display = 'block';
     renderLeaderboard();
   }
 }
@@ -573,7 +599,7 @@ async function renderSubjects() {
   for (const [key, subj] of Object.entries(APP_DATA.subjects)) {
     const qs = await Cloud.getQuestions(key);
     html += `
-      <div class="card subject-card" data-sid="${key}">
+      <div class="card subject-card" data-sid="${key}" data-action="open">
         <div class="subject-icon">${subj.icon}</div>
         <h3>${subj.name}</h3>
         <p>${subj.description}</p>
@@ -585,8 +611,9 @@ async function renderSubjects() {
     `;
   }
   grid.innerHTML = html;
-  $$('.subject-card[data-sid]', grid).forEach(c => c.onclick = () => openSubjectModal(c.dataset.sid));
+  $$('.subject-card[data-action="open"]', grid).forEach(c => c.onclick = () => openSubjectPage(c.dataset.sid));
 }
+
 async function renderStudySubjects() {
   const grid = $('#studySubjectGrid');
   let html = '';
@@ -606,8 +633,9 @@ async function renderStudySubjects() {
     `;
   }
   grid.innerHTML = html;
-  $$('.subject-card[data-sid]', grid).forEach(c => c.onclick = () => openSubjectModal(c.dataset.sid));
+  $$('.subject-card[data-sid]', grid).forEach(c => c.onclick = () => openSubjectPage(c.dataset.sid));
 }
+
 async function renderExamSubjects() {
   const grid = $('#examSubjectGrid');
   let html = '';
@@ -637,60 +665,33 @@ async function renderExamSubjects() {
     }
   });
 }
-function renderComingSoon() {
-  const html = APP_DATA.comingSoon.map(c => `
-    <div class="coming-card">
-      <div class="coming-badge">${c.enabled ? 'متاح' : 'قريباً'}</div>
-      <div class="coming-icon">${c.title.charAt(0)}</div>
-      <h3>${c.title}</h3>
-      <p>${c.desc}</p>
-    </div>
-  `).join('');
-  $('#comingGridHome').innerHTML = html;
-  $('#comingGridFull').innerHTML = html;
-  $$('.coming-card').forEach(c => c.onclick = () => showToast('جاري تجهيز هذه الميزة وستُتاح قريباً', 'info'));
-}
-function renderSubjectDropdowns() {
-  const opts = Object.entries(APP_DATA.subjects).map(([k,s]) => `<option value="${k}">${s.name}</option>`).join('');
-  ['rescueSubject','duelSubject','bulkSubject','singleSubject','bankSubjectFilter','notesSubject','flashSubject'].forEach(id => {
-    const el = $('#' + id);
-    if (el) el.innerHTML = opts;
-  });
-}
 
-/* ============ Modals ============ */
-function initModals() {
-  $$('.modal-close').forEach(b => b.onclick = () => { const t = b.dataset.close; if (t) closeModal(t); });
-  $$('.modal-backdrop').forEach(bd => bd.onclick = (e) => {
-    if (e.target === bd) {
-      if (bd.id === 'examRunnerModal' && AppState.activeExam) return;
-      if (bd.id === 'duelRunnerModal' && AppState.activeDuel) return;
-      bd.classList.remove('active');
-    }
-  });
-}
-
-/* ============ Subject Modal ============ */
-async function openSubjectModal(sid) {
+/* ============ Subject Page (SPA) ============ */
+async function openSubjectPage(sid) {
+  AppState.currentSubject = sid;
   const subj = APP_DATA.subjects[sid];
-  $('#subjectModalTitle').textContent = subj.name;
+  $('#detailSubjectTitle').textContent = subj.name;
+  $('#detailSubjectDesc').textContent = subj.description;
+  
   const notes = await Cloud.getNotes(sid);
   const cards = await Cloud.getFlashcards(sid);
+  
   if (notes.length === 0) {
-    $('#studyNotesPanel').innerHTML = emptyState('لا توجد ملخصات بعد','جاري تعبئة المحتوى.. ترقبوا النشر قريباً');
+    $('#detailNotesPanel').innerHTML = emptyState('لا توجد ملخصات بعد','جاري تعبئة المحتوى.. ترقبوا النشر قريباً');
   } else {
-    $('#studyNotesPanel').innerHTML = notes.map((n,i) => `
+    $('#detailNotesPanel').innerHTML = notes.map((n,i) => `
       <div class="accordion-item" data-idx="${i}">
         <div class="accordion-header"><span>${escapeHtml(n.title)}</span><span class="chevron">v</span></div>
         <div class="accordion-body">${escapeHtml(n.content).replace(/\n/g,'<br>')}</div>
       </div>
     `).join('');
-    $$('#studyNotesPanel .accordion-header').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
+    $$('#detailNotesPanel .accordion-header').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
   }
+  
   if (cards.length === 0) {
-    $('#studyFlashcardsPanel').innerHTML = emptyState('لا توجد بطاقات بعد','جاري تجهيز البطاقات.. ترقبوا النشر قريباً');
+    $('#detailFlashcardsPanel').innerHTML = emptyState('لا توجد بطاقات بعد','جاري تجهيز البطاقات.. ترقبوا النشر قريباً');
   } else {
-    $('#studyFlashcardsPanel').innerHTML = `
+    $('#detailFlashcardsPanel').innerHTML = `
       <div class="flashcard-grid">
         ${cards.map(c => `
           <div class="flashcard"><div class="flashcard-inner">
@@ -700,13 +701,204 @@ async function openSubjectModal(sid) {
         `).join('')}
       </div>
     `;
-    $$('#studyFlashcardsPanel .flashcard').forEach(f => f.onclick = () => f.classList.toggle('flipped'));
+    $$('#detailFlashcardsPanel .flashcard').forEach(f => f.onclick = () => f.classList.toggle('flipped'));
   }
-  $$('#subjectTabs .tab').forEach(t => t.classList.remove('active'));
-  $('#subjectTabs .tab[data-stab="notes"]').classList.add('active');
-  $('#studyNotesPanel').style.display = 'block';
-  $('#studyFlashcardsPanel').style.display = 'none';
-  openModal('subjectModal');
+
+  // Set active tab to notes
+  $$('#detailTabs .tab').forEach(t => t.classList.remove('active'));
+  $('#detailTabs .tab[data-dtab="notes"]').classList.add('active');
+  $('#detailNotesPanel').style.display = 'block';
+  $('#detailFlashcardsPanel').style.display = 'none';
+
+  // Set exam button
+  const qs = await Cloud.getQuestions(sid);
+  const examBtn = $('#detailExamBtn');
+  if (qs.length > 0) {
+    examBtn.disabled = false;
+    examBtn.onclick = () => openExamSetup(sid);
+  } else {
+    examBtn.disabled = true;
+    examBtn.textContent = 'الامتحان قريباً';
+  }
+
+  $('#backFromSubject').onclick = () => navigateTo('study');
+  navigateTo('subject-detail');
+}
+
+/* ============ Navigation ============ */
+function navigateTo(page) {
+  AppState.currentPage = page;
+  ['home','study','exams','duel','leaderboard','coming','profile','wrongs','ztona','subject-detail'].forEach(p => {
+    const el = $('#page-' + p);
+    if (el) el.style.display = p === page ? 'block' : 'none';
+  });
+  
+  if (!page.startsWith('subject')) {
+    $$('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+    $$('.sidebar-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+  }
+
+  if (page === 'leaderboard' && AppState.user?.role !== 'guest') renderLeaderboard();
+  if (page === 'study') renderStudySubjects();
+  if (page === 'exams') renderExamSubjects();
+  if (page === 'profile') renderProfile();
+  if (page === 'wrongs') renderWrongsPage();
+  if (page === 'ztona') renderZtonaPage();
+  
+  closeSidebar();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function initNav() {
+  $$('.nav-link').forEach(l => l.onclick = (e) => { e.preventDefault(); navigateTo(l.dataset.page); });
+  $$('.sidebar-link[data-page]').forEach(l => l.onclick = (e) => { e.preventDefault(); navigateTo(l.dataset.page); });
+  $('#brandHome').onclick = () => navigateTo('home');
+  
+  $('#sidebarProfile').onclick = () => navigateTo('profile');
+  $('#sidebarWrongs').onclick = () => navigateTo('wrongs');
+  $('#sidebarZtona').onclick = () => navigateTo('ztona');
+
+  // Detail tabs
+  document.addEventListener('click', (e) => {
+    const tab = e.target.closest('#detailTabs .tab');
+    if (!tab) return;
+    $$('#detailTabs .tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    $('#detailNotesPanel').style.display = tab.dataset.dtab === 'notes' ? 'block' : 'none';
+    $('#detailFlashcardsPanel').style.display = tab.dataset.dtab === 'flashcards' ? 'block' : 'none';
+  });
+}
+
+/* ============ Sidebar ============ */
+function openSidebar() { $('#sidebar').classList.add('active'); $('#sidebarBackdrop').classList.add('active'); }
+function closeSidebar() { $('#sidebar').classList.remove('active'); $('#sidebarBackdrop').classList.remove('active'); }
+function initSidebar() {
+  $('#hamburgerBtn').onclick = openSidebar;
+  $('#closeSidebarBtn').onclick = closeSidebar;
+  $('#sidebarBackdrop').onclick = closeSidebar;
+}
+
+/* ============ Profile ============ */
+async function renderProfile() {
+  if (!AppState.user || AppState.user.role === 'guest') return;
+  const scores = (await Cloud.getScores()).filter(s => s.userName === AppState.user.name);
+  const totalExams = scores.length;
+  const avg = totalExams > 0 ? Math.round(scores.reduce((a,b)=>a+b.pct,0)/totalExams) : 0;
+  const wrongCount = (AppState.user.wrongQuestions || []).length;
+  
+  $('#profileCard').innerHTML = `
+    <div class="profile-avatar">${AppState.user.name.charAt(0)}</div>
+    <h2 class="profile-name">${escapeHtml(AppState.user.name)}</h2>
+    <span class="profile-branch">${APP_DATA.branches[AppState.user.branch]?.name || ''}</span>
+    <div class="profile-xp">${AppState.user.xp || 0}</div>
+    <div class="profile-xp-label">نقطة خبرة (XP)</div>
+  `;
+  
+  $('#profileStats').innerHTML = `
+    <div class="card text-center"><h3 class="text-muted text-sm">الامتحانات</h3><p style="font-size:2rem;font-weight:700;color:var(--primary)">${totalExams}</p></div>
+    <div class="card text-center"><h3 class="text-muted text-sm">متوسط الدرجات</h3><p style="font-size:2rem;font-weight:700;color:var(--success)">${avg}%</p></div>
+    <div class="card text-center"><h3 class="text-muted text-sm">أخطائي السابقة</h3><p style="font-size:2rem;font-weight:700;color:var(--danger)">${wrongCount}</p></div>
+  `;
+}
+
+/* ============ Wrong Questions Bank ============ */
+async function renderWrongsPage() {
+  const grid = $('#wrongsSubjectGrid');
+  const wrongQs = AppState.user.wrongQuestions || [];
+  let html = '';
+  for (const [sid, subj] of Object.entries(APP_DATA.subjects)) {
+    const count = wrongQs.filter(w => w.subjectId === sid).length;
+    if (count > 0) {
+      html += `
+        <div class="card subject-card" data-sid="${sid}">
+          <div class="subject-icon" style="background:var(--danger-soft);color:var(--danger)">${subj.icon}</div>
+          <h3>${subj.name}</h3>
+          <p>عندك ${count} سؤال غلط محتاج مراجعة</p>
+          <button class="btn btn-danger btn-block mt-2">امتحن أخطائي</button>
+        </div>
+      `;
+    }
+  }
+  if (!html) html = emptyState('لا توجد أخطاء', 'مبروك! مفيش أسئلة غلط في بنك أخطائك لحد دلوقتي.');
+  grid.innerHTML = html;
+  
+  $$('.subject-card[data-sid]', grid).forEach(c => {
+    c.querySelector('button').onclick = (e) => {
+      e.stopPropagation();
+      startWrongExam(c.dataset.sid);
+    };
+  });
+}
+
+async function startWrongExam(sid) {
+  const wrongQs = (AppState.user.wrongQuestions || []).filter(w => w.subjectId === sid);
+  if (!wrongQs.length) return showToast('لا توجد أسئلة', 'warning');
+  
+  const allQs = await Cloud.getQuestions(sid);
+  const questions = wrongQs.map(w => allQs.find(q => q.id === w.questionId)).filter(Boolean);
+  
+  if (!questions.length) return showToast('الأسئلة لم تعد موجودة', 'warning');
+  
+  const session = {
+    id: uid(), subjectId: sid, mode: 'wrongs',
+    questions: questions.map(q => ({
+      ...q,
+      options: q.options ? shuffle(q.options) : q.options,
+      _origOptions: q.options,
+      _userAnswer: null, _flagged: false
+    })),
+    currentIdx: 0, startTime: Date.now(), durationMs: Math.max(5, questions.length) * 60000, tabSwitches: 0
+  };
+  
+  session.questions.forEach(q => {
+    if (q.type !== 'tf' && q.options && q._origOptions) {
+      q.correct = q.options.indexOf(q._origOptions[q.correct]);
+    }
+  });
+  
+  AppState.activeExam = session;
+  Store.set('activeExam', session);
+  launchExamRunner();
+}
+
+/* ============ Ztona Page ============ */
+async function renderZtonaPage() {
+  const grid = $('#ztonaSubjectGrid');
+  let html = '';
+  for (const [sid, subj] of Object.entries(APP_DATA.subjects)) {
+    const ztona = await Cloud.getZtona(sid);
+    html += `
+      <div class="card subject-card" data-sid="${sid}">
+        <div class="subject-icon" style="background:var(--gold-soft);color:#CA8A04">${subj.icon}</div>
+        <h3>${subj.name}</h3>
+        <p>${ztona.length} نقطة متوقعة</p>
+        <button class="btn btn-gold btn-block mt-2" ${ztona.length===0?'disabled':''}>${ztona.length===0 ? 'قريباً' : 'افتح الزتونة'}</button>
+      </div>
+    `;
+  }
+  grid.innerHTML = html;
+  $$('.subject-card[data-sid]', grid).forEach(c => {
+    const btn = c.querySelector('button');
+    if (!btn.disabled) btn.onclick = () => showZtonaModal(c.dataset.sid);
+  });
+}
+
+async function showZtonaModal(sid) {
+  const subj = APP_DATA.subjects[sid];
+  const ztona = await Cloud.getZtona(sid);
+  let html = `<h4 class="mb-2" style="color:var(--gold)">${subj.name} — التوقعات</h4>`;
+  ztona.forEach(z => {
+    html += `
+      <div class="ztona-item ${z.important ? 'important' : ''}">
+        ${z.important ? '<span class="ztona-badge">مهم جداً - بيتكرر في الفاينل</span>' : ''}
+        <div class="ztona-q">${escapeHtml(z.text)}</div>
+      </div>
+    `;
+  });
+  
+  // Reuse a generic modal by injecting into shareCardModal
+  $('#shareCardBody').innerHTML = html;
+  openModal('shareCardModal');
 }
 
 /* ============ Exam Engine ============ */
@@ -734,6 +926,7 @@ async function openExamSetup(sid) {
   });
   openModal('examSetupModal');
 }
+
 function openCustomExamSetup(sid) {
   const subj = APP_DATA.subjects[sid];
   $('#examSetupBody').innerHTML = `
@@ -752,6 +945,7 @@ function openCustomExamSetup(sid) {
     startExam(sid, 'custom', { count: parseInt($('#customCount').value)||10, type: $('#customType').value });
   };
 }
+
 async function startExam(sid, mode, opts={}) {
   closeModal('examSetupModal');
   const all = await Cloud.getQuestions(sid);
@@ -784,6 +978,7 @@ async function startExam(sid, mode, opts={}) {
   Store.set('activeExam', session);
   launchExamRunner();
 }
+
 function launchExamRunner() {
   const s = AppState.activeExam;
   if (!s) return;
@@ -793,7 +988,7 @@ function launchExamRunner() {
   startExamTimer();
   setupAntiCheat();
 }
-function getModeLabel(m) { return {official:'شامل',quick:'كبسولة',hardcore:'تركات',custom:'مخصص'}[m]||m; }
+function getModeLabel(m) { return {official:'شامل',quick:'كبسولة',hardcore:'تركات',custom:'مخصص',wrongs:'أخطائي'}[m]||m; }
 
 function renderExamRunner() {
   const s = AppState.activeExam; if (!s) return;
@@ -903,19 +1098,48 @@ function onVisibilityChange() {
     showToast('خليك في لجنتك.. اعتمد على نفسك!', 'warning');
   }
 }
+
 async function submitExam(auto=false) {
   const s = AppState.activeExam; if (!s) return;
   clearInterval(examTimerInterval);
   document.removeEventListener('visibilitychange', onVisibilityChange);
+  
   const total = s.questions.length;
   let correct = 0;
-  s.questions.forEach(q => { if (q._userAnswer !== null && q._userAnswer === q.correct) correct++; });
+  const wrongThisSession = [];
+  
+  s.questions.forEach(q => { 
+    if (q._userAnswer !== null && q._userAnswer === q.correct) {
+      correct++; 
+      // Remove from wrong bank if answered correctly
+      if (AppState.user && AppState.user.role === 'student') {
+        AppState.user.wrongQuestions = (AppState.user.wrongQuestions || []).filter(w => w.questionId !== q.id);
+      }
+    } else {
+      // Add to wrong bank
+      if (AppState.user && AppState.user.role === 'student' && q._userAnswer !== null) {
+        const wrongList = AppState.user.wrongQuestions || [];
+        if (!wrongList.find(w => w.questionId === q.id)) {
+          wrongList.push({ subjectId: s.subjectId, questionId: q.id });
+          AppState.user.wrongQuestions = wrongList;
+        }
+      }
+    }
+  });
+  
+  if (AppState.user && AppState.user.role === 'student') {
+    Store.set('session', AppState.user);
+    Cloud.saveUser(AppState.user);
+  }
+
   const pct = total > 0 ? Math.round((correct/total)*100) : 0;
   const elapsed = Math.min(s.durationMs, Date.now() - s.startTime);
   const elapsedMin = Math.floor(elapsed/60000), elapsedSec = Math.floor((elapsed%60000)/1000);
   let grade = 'ضعيف';
   if (pct>=85) grade='ممتاز'; else if (pct>=75) grade='جيد جداً'; else if (pct>=65) grade='جيد'; else if (pct>=50) grade='مقبول';
+  
   const result = { subjectId: s.subjectId, subjectName: APP_DATA.subjects[s.subjectId].name, total, correct, pct, grade, elapsedMin, elapsedSec, tabSwitches: s.tabSwitches||0, questions: s.questions, date: new Date().toISOString() };
+  
   if (AppState.user?.role === 'student') {
     await Cloud.saveScore({ userName: AppState.user.name, branch: AppState.user.branch, subjectId: s.subjectId, pct, grade, date: result.date });
     addXP(Math.round(pct/2) + 10);
@@ -927,6 +1151,7 @@ async function submitExam(auto=false) {
   updateReadiness();
   updateBranchBattle();
 }
+
 function addXP(amount) {
   if (!AppState.user || AppState.user.role === 'guest') return;
   AppState.user.xp = (AppState.user.xp || 0) + amount;
@@ -935,8 +1160,27 @@ function addXP(amount) {
   renderUserChip();
   showToast(`+${amount} XP`, 'success');
 }
+
 function showExamResult(r, auto) {
   const cmpPct = Math.min(99, Math.round(r.pct*0.9 + Math.random()*10));
+  
+  let certHtml = '';
+  if (r.pct >= 90 && AppState.user.role === 'student') {
+    certHtml = `
+      <div class="certificate-card mt-3" id="certificateCard">
+        <div class="cert-logo">MCI Social Hub</div>
+        <div class="cert-title">شهادة تقدير</div>
+        <div class="text-sm text-muted mb-2">تُمنح هذه الشهادة إلى</div>
+        <div class="cert-name">${escapeHtml(AppState.user.name)}</div>
+        <div class="cert-score">لتحقيقه درجة <strong>${r.pct}%</strong> في مادة ${escapeHtml(r.subjectName)}</div>
+        <div class="cert-seal">MCI Social Hub — بإشراف الليدر صلاح أشرف</div>
+      </div>
+      <div class="flex gap-1 mt-2">
+        <button class="btn btn-primary btn-block" onclick="window.print()">طباعة / حفظ PDF</button>
+      </div>
+    `;
+  }
+
   $('#examResultBody').innerHTML = `
     ${auto ? '<div class="badge badge-warning mb-2">تم التسليم تلقائياً</div>' : ''}
     <div class="result-hero">
@@ -949,6 +1193,9 @@ function showExamResult(r, auto) {
         <div class="result-stat"><div class="rs-num">${cmpPct}%</div><div class="rs-lbl">متفوق على</div></div>
       </div>
     </div>
+    
+    ${certHtml}
+    
     <p class="text-center text-sm text-muted mb-3">أنت متفوق على ${cmpPct}% من طلاب الدفعة في هذه المادة</p>
     <div class="flex gap-1 wrap mb-3">
       <button class="btn btn-primary btn-sm" id="retryWrongBtn">إعادة أخطائي فقط</button>
@@ -957,6 +1204,7 @@ function showExamResult(r, auto) {
     <h4 class="mb-2">كشف الإجابات النموذجية</h4>
     ${r.questions.map((q,i) => renderAnswerReview(q,i)).join('')}
   `;
+  
   $('#retryWrongBtn').onclick = () => retryWrong(r);
   $('#shareResultBtn').onclick = () => {
     $('#shareCardBody').innerHTML = `
@@ -974,6 +1222,7 @@ function showExamResult(r, auto) {
   };
   openModal('examResultModal');
 }
+
 function renderAnswerReview(q, i) {
   const opts = q.options || [];
   return `
@@ -989,6 +1238,7 @@ function renderAnswerReview(q, i) {
     </div>
   `;
 }
+
 function retryWrong(r) {
   const wrong = r.questions.filter(q => q._userAnswer !== q.correct);
   if (!wrong.length) return showToast('لا توجد أخطاء!', 'success');
@@ -1039,7 +1289,7 @@ function updateCountdown() {
   else $('#nightBeforeWrap').classList.add('hidden');
 }
 
-/* ============ Study timer ============ */
+/* ============ Study Timer ============ */
 let studyTimerState = { running: false, remaining: 25*60, mode: 'study' };
 let studyTimerInterval = null;
 function initStudyTimer() {
@@ -1228,7 +1478,6 @@ function initRescue() {
     showRescuePlan(plan);
   };
 }
-function restoreRescuePlan() {}
 function showRescuePlan(plan) {
   const subj = APP_DATA.subjects[plan.subjectId];
   const elapsed = Math.floor((Date.now() - plan.startTime) / 60000);
@@ -1255,7 +1504,7 @@ function showRescuePlan(plan) {
   $('#rescuePlanBody').innerHTML = html;
 }
 
-/* ============ Duel (1v1) — Fixed with Firestore ============ */
+/* ============ Duel ============ */
 function initDuel() {
   $('#duelCreateBtn').onclick = async () => {
     if (AppState.user?.role === 'guest') return showToast('سجل حسابك أول', 'warning');
@@ -1286,7 +1535,6 @@ function initDuel() {
       if (navigator.share) navigator.share({ title: 'تحدي 1v1', text: txt }).catch(()=>{});
       else navigator.clipboard?.writeText(txt).then(() => showToast('تم نسخ الرابط', 'success'));
     };
-    // Start waiting screen
     openDuelWaiting(code, true);
   };
   $('#duelJoinBtn').onclick = async () => {
@@ -1323,7 +1571,6 @@ async function openDuelWaiting(code, isCreator) {
         });
       }
     } else if (duel.status === 'ready') {
-      // Both players present — start
       $('#duelRunnerBody').innerHTML = `<div class="duel-wait"><h3>جاهز! استعد...</h3><p>التحدي هيبدأ في 3 ثواني</p></div>`;
       setTimeout(() => {
         if (AppState.duelUnsubscribe) AppState.duelUnsubscribe();
@@ -1391,7 +1638,6 @@ async function submitDuel() {
   const time = Math.floor((Date.now() - s.startTime) / 1000);
   const xp = Math.round(pct/2) + 20;
   addXP(xp);
-  // Save to duel
   await Cloud.updateDuel(AppState.activeDuel.code, {
     [`players.${AppState.user.id}`]: { name: AppState.user.name, score: pct, correct, total, time, finished: true, xp }
   });
@@ -1512,16 +1758,18 @@ function initAskSalah() {
   };
 }
 
-/* ============ Auth handlers ============ */
+/* ============ Auth Handlers ============ */
 function initAuthHandlers() {
   $('#registerCard').onclick = () => openModal('registerModal');
   $('#guestCard').onclick = () => openModal('guestBranchModal');
-  $('#restoreAccountBtn').onclick = () => openModal('restoreModal');
+  $('#loginCard').onclick = () => openModal('loginModal');
   $('#lockRegisterBtn').onclick = () => openModal('registerModal');
   $('#lockRegisterBtn2').onclick = () => openModal('registerModal');
+  
   $('#userChip').onclick = () => {
     if (AppState.user?.role === 'guest') openModal('registerModal');
   };
+  
   $('#registerSubmitBtn').onclick = async () => {
     const name = $('#regName').value, branch = $('#regBranch').value, pin = $('#regPin').value;
     let ok = true;
@@ -1533,27 +1781,29 @@ function initAuthHandlers() {
     const res = await registerUser(name, branch, pin);
     if (!res.ok) { $('#regPinErr').textContent = res.error; $('#regPinErr').classList.add('show'); return; }
     closeModal('registerModal');
-    loginUser(res.user);
+    setSession(res.user);
     showToast('تم إنشاء حسابك بنجاح', 'success');
   };
+  
   $('#guestEnterBtn').onclick = () => {
     const branch = $('#guestBranch').value;
     closeModal('guestBranchModal');
     loginGuest(branch);
     showToast('دخلت كزائر — المذاكرة متاحة، الامتحانات مقفولة', 'info');
   };
-  $('#restoreSubmitBtn').onclick = async () => {
-    const pin = $('#restorePin').value;
-    $('#restorePinErr').classList.remove('show');
-    const user = await findUserByPin(pin);
-    if (!user) { $('#restorePinErr').classList.add('show'); return; }
-    closeModal('restoreModal');
-    loginUser(user);
-    showToast('تم استرجاع حسابك', 'success');
+  
+  $('#loginSubmitBtn').onclick = async () => {
+    const pin = $('#loginPin').value;
+    $('#loginPinErr').classList.remove('show');
+    const user = await loginUserByPin(pin);
+    if (!user) { $('#loginPinErr').classList.add('show'); return; }
+    closeModal('loginModal');
+    setSession(user);
+    showToast('تم تسجيل الدخول', 'success');
   };
 }
 
-/* ============ Secret admin ============ */
+/* ============ Secret Admin ============ */
 let secretClicks = 0, secretTimer = null;
 function initSecretAdmin() {
   $('#secretTrigger').onclick = () => {
@@ -1567,7 +1817,6 @@ function initSecretAdmin() {
     if (pass === '123') {
       closeModal('adminLoginModal');
       $('#adminPassword').value = '';
-      AppState.adminLoggedIn = true;
       openModal('adminDashboardModal');
       initAdminDashboard();
       showToast('مرحباً ليدر الدفعة', 'success');
@@ -1588,6 +1837,7 @@ function initAdminDashboard() {
     if (t.dataset.atab === 'stats') renderAdminStats();
     if (t.dataset.atab === 'reports') renderReports();
     if (t.dataset.atab === 'exams') renderQbank();
+    if (t.dataset.atab === 'ztona') renderZtonaAdmin();
   });
 
   $('#bulkPreviewBtn').onclick = () => {
@@ -1653,6 +1903,19 @@ function initAdminDashboard() {
     showToast('تم إضافة البطاقة', 'success');
   };
 
+  $('#ztonaSubmitBtn').onclick = async () => {
+    const sid = $('#ztonaSubject').value;
+    const text = $('#ztonaText').value.trim();
+    const important = $('#ztonaImportant').value === 'true';
+    if (!text) return showToast('اكتب النقطة', 'warning');
+    const ztona = await Cloud.getZtona(sid);
+    ztona.push({ id: uid(), text, important });
+    await Cloud.saveZtona(sid, ztona);
+    $('#ztonaText').value = '';
+    showToast('تم إضافة النقطة', 'success');
+    renderZtonaAdmin();
+  };
+
   $('#tickerSubmitBtn').onclick = async () => {
     const msgs = $('#tickerInput').value.split('\n').map(l => l.trim()).filter(Boolean);
     if (!msgs.length) return showToast('أدخل رسالة واحدة', 'warning');
@@ -1706,7 +1969,29 @@ function initAdminDashboard() {
     const total = poll.votes.reduce((a,b) => a+b, 0);
     $('#pollAdminResult').innerHTML = `<h4 class="mb-2">النتائج الحالية</h4>` + poll.options.map((o,i) => `<div class="qbank-item"><div class="qb-q">${escapeHtml(o)}</div><div class="qb-meta"><span class="badge badge-primary">${poll.votes[i]} صوت</span><span class="badge badge-success">${total>0?Math.round(poll.votes[i]/total*100):0}%</span></div></div>`).join('');
   }
+  
+  async function renderZtonaAdmin() {
+    const sid = $('#ztonaSubject').value;
+    if (!sid) return;
+    const ztona = await Cloud.getZtona(sid);
+    if (!ztona.length) { $('#ztonaAdminList').innerHTML = '<p class="text-muted">لا توجد نقاط</p>'; return; }
+    $('#ztonaAdminList').innerHTML = ztona.map((z,i) => `
+      <div class="qbank-item">
+        <div class="qb-q">${i+1}. ${escapeHtml(z.text)} ${z.important ? '<span class="badge badge-danger">تريكة</span>' : ''}</div>
+        <div class="qb-actions"><button class="btn btn-danger btn-xs" onclick="deleteZtona('${sid}','${z.id}')">حذف</button></div>
+      </div>
+    `).join('');
+  }
+  $('#ztonaSubject').onchange = renderZtonaAdmin;
+  window.deleteZtona = async function(sid, zid) {
+    if (!confirm('حذف النقطة؟')) return;
+    const ztona = await Cloud.getZtona(sid);
+    await Cloud.saveZtona(sid, ztona.filter(z => z.id !== zid));
+    renderZtonaAdmin();
+    showToast('تم الحذف', 'success');
+  };
 }
+
 function parseBulkText(text) {
   const blocks = text.split(/\n-{3,}\n|\n\n+/).map(b => b.trim()).filter(Boolean);
   const result = [];
@@ -1739,6 +2024,7 @@ function parseBulkText(text) {
   });
   return result;
 }
+
 async function renderQbank() {
   const sid = $('#bankSubjectFilter').value;
   if (!sid) return;
@@ -1752,6 +2038,7 @@ async function renderQbank() {
     </div>
   `).join('');
 }
+
 window.deleteQuestion = async function(sid, qid) {
   if (!confirm('حذف السؤال؟')) return;
   const qs = await Cloud.getQuestions(sid);
@@ -1760,6 +2047,7 @@ window.deleteQuestion = async function(sid, qid) {
   renderSubjects();
   showToast('تم الحذف', 'success');
 };
+
 async function renderAdminStats() {
   const users = await Cloud.getUsers();
   const scores = await Cloud.getScores();
@@ -1777,12 +2065,14 @@ async function renderAdminStats() {
     <div>${users.map(u => `<div class="qbank-item"><div class="qb-q">${escapeHtml(u.name)}</div><div class="qb-meta"><span class="badge badge-primary">${APP_DATA.branches[u.branch]?.name||u.branch}</span><span class="badge badge-success">${u.xp||0} XP</span></div><div class="qb-actions"><button class="btn btn-danger btn-xs" onclick="deleteUserAdmin('${u.id}')">حذف</button></div></div>`).join('')}</div>
   `;
 }
+
 window.deleteUserAdmin = async function(id) {
   if (!confirm('حذف الحساب؟')) return;
   await Cloud.deleteUser(id);
   renderAdminStats();
   showToast('تم الحذف', 'success');
 };
+
 async function renderReports() {
   const reports = await Cloud.getReports();
   if (!reports.length) { $('#reportsList').innerHTML = '<p class="text-muted">لا توجد بلاغات</p>'; return; }
@@ -1795,6 +2085,7 @@ async function renderReports() {
     </div>
   `).join('');
 }
+
 window.resolveReportAdmin = async function(id) {
   await Cloud.resolveReport(id);
   renderReports();
@@ -1811,25 +2102,7 @@ function renderTicker(msgs) {
   $('#tickerInner').innerHTML = msgs.map(m => `<span>${escapeHtml(m)}</span>`).join('');
 }
 
-/* ============ Nav ============ */
-function navigateTo(page) {
-  AppState.currentPage = page;
-  ['home','study','exams','duel','leaderboard','coming'].forEach(p => {
-    const el = $('#page-' + p);
-    if (el) el.style.display = p === page ? 'block' : 'none';
-  });
-  $$('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
-  if (page === 'leaderboard' && AppState.user?.role !== 'guest') renderLeaderboard();
-  if (page === 'study') renderStudySubjects();
-  if (page === 'exams') renderExamSubjects();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function initNav() {
-  $$('.nav-link').forEach(l => l.onclick = (e) => { e.preventDefault(); navigateTo(l.dataset.page); });
-  $('#brandHome').onclick = () => navigateTo('home');
-}
-
-/* ============ Resume banner ============ */
+/* ============ Resume Banner ============ */
 function checkResumeBanner() {
   const saved = Store.get('activeExam', null);
   if (!saved) return;
@@ -1847,7 +2120,7 @@ function checkResumeBanner() {
   };
 }
 
-/* ============ Leader msg ============ */
+/* ============ Leader Msg ============ */
 function initLeaderMsg() { $('#leaderMsgBtn').onclick = () => openModal('leaderMsgModal'); }
 
 /* ============ Init ============ */
@@ -1855,6 +2128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initModals();
   initNav();
+  initSidebar();
   initAuthHandlers();
   initSecretAdmin();
   initLeaderMsg();
@@ -1863,23 +2137,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDuel();
   initNightBefore();
   initAskSalah();
-  initSubjectTabs = () => {};
-
-  // tab handler for subject modal
-  document.addEventListener('click', (e) => {
-    const tab = e.target.closest('#subjectTabs .tab');
-    if (!tab) return;
-    $$('#subjectTabs .tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    $('#studyNotesPanel').style.display = tab.dataset.stab === 'notes' ? 'block' : 'none';
-    $('#studyFlashcardsPanel').style.display = tab.dataset.stab === 'flashcards' ? 'block' : 'none';
-  });
 
   if (restoreSession()) afterLogin();
 
   $('#heroStudyBtn').onclick = () => navigateTo('study');
   $('#heroExamBtn').onclick = () => navigateTo('exams');
   $('#heroDuelBtn').onclick = () => navigateTo('duel');
+  
   $('#examQuitBtn').onclick = () => {
     if (confirm('إغلاق الامتحان؟ سيتم حفظ تقدمك')) { clearInterval(examTimerInterval); closeModal('examRunnerModal'); }
   };
@@ -1888,7 +2152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeModal('duelRunnerModal'); AppState.activeDuel = null;
   };
 
-  // Handle URL params (?duel=XXXXXX)
   const params = new URLSearchParams(location.search);
   const duelCode = params.get('duel');
   if (duelCode) {
@@ -1900,3 +2163,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 1000);
   }
 });
+
+function initModals() {
+  $$('.modal-close').forEach(b => b.onclick = () => { const t = b.dataset.close; if (t) closeModal(t); });
+  $$('.modal-backdrop').forEach(bd => bd.onclick = (e) => {
+    if (e.target === bd) {
+      if (bd.id === 'examRunnerModal' && AppState.activeExam) return;
+      if (bd.id === 'duelRunnerModal' && AppState.activeDuel) return;
+      bd.classList.remove('active');
+    }
+  });
+}
