@@ -400,6 +400,75 @@ select.form-control{cursor:pointer}
 .answer-review .ar-opt.wrong{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);font-weight:600}
 .answer-review .ar-explain{margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--secondary-soft);font-size:0.84rem;color:var(--warning);border-right:3px solid var(--secondary)}
 
+/* ===================== Share Card (NEW) ===================== */
+.share-card{
+  background: var(--grad-hero);
+  color:#fff;
+  border-radius:var(--radius-lg);
+  padding:34px 24px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  box-shadow: 0 20px 50px rgba(37,99,235,0.35);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.share-card::before{
+  content:"★";
+  position:absolute;
+  top:-10px; left:-10px;
+  font-size:5rem;
+  color:rgba(255,255,255,0.15);
+  transform:rotate(-15deg);
+}
+.share-card::after{
+  content:"★";
+  position:absolute;
+  bottom:-20px; right:-10px;
+  font-size:6rem;
+  color:rgba(255,255,255,0.10);
+  transform:rotate(15deg);
+}
+.share-card .sc-logo{
+  font-size:1.3rem;
+  font-weight:800;
+  margin-bottom:6px;
+  letter-spacing:0.5px;
+  text-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+.share-card .sc-sub{
+  font-size:0.85rem;
+  opacity:0.9;
+  margin-bottom:22px;
+  font-weight:500;
+}
+.share-card .sc-score{
+  font-size:4rem;
+  font-weight:800;
+  line-height:1;
+  text-shadow:0 4px 15px rgba(0,0,0,0.25);
+  margin-bottom:8px;
+}
+.share-card .sc-detail{
+  font-size:0.92rem;
+  opacity:0.95;
+  margin-top:6px;
+  font-weight:600;
+  background:rgba(255,255,255,0.15);
+  padding:6px 14px;
+  border-radius:99px;
+  display:inline-block;
+  margin:6px 4px;
+}
+.share-card .sc-seal{
+  margin-top:24px;
+  padding-top:18px;
+  border-top:1px dashed rgba(255,255,255,0.35);
+  font-size:0.82rem;
+  opacity:0.9;
+  font-weight:600;
+  line-height:1.7;
+}
+
 .certificate-card{background:#fff;color:#1E293B;border-radius:var(--radius-lg);padding:40px 30px;text-align:center;border:8px solid var(--gold);box-shadow:0 10px 30px rgba(234,179,8,0.3);position:relative;overflow:hidden;}
 .certificate-card::before{content:"★";position:absolute;top:10px;left:20px;font-size:3rem;color:var(--gold);opacity:0.2;}
 .certificate-card .cert-logo{font-size:1.5rem;font-weight:800;color:var(--primary);margin-bottom:16px;}
@@ -422,7 +491,7 @@ select.form-control{cursor:pointer}
 .guest-lock h3{font-size:1.1rem;margin-bottom:8px}
 .guest-lock p{color:var(--text-muted);font-size:0.9rem;max-width:440px;margin:0 auto 18px}
 
-.coming-card{background:var(--card);border-radius:var(--radius);padding:24px 20px;border:1px solid var(--border);position:relative;overflow:hidden;opacity:0.85;transition:var(--transition);cursor:pointer}
+.coming-card{background:var(--card);border-radius:var(--radius);padding:24px 20px;border:1px solid var(--border);position:relative;overflow:hidden;opacity:0.9;transition:var(--transition);cursor:pointer}
 .coming-card:hover{opacity:1;transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .coming-card .coming-badge{position:absolute;top:14px;left:14px;background:var(--secondary-soft);color:var(--warning);padding:4px 12px;border-radius:999px;font-size:0.72rem;font-weight:700}
 .coming-card .coming-icon{font-size:1.5rem;margin-bottom:12px;font-weight:700;color:var(--primary)}
@@ -568,6 +637,9 @@ select.form-control{cursor:pointer}
     <a class="sidebar-link" id="sidebarProfile">ملفي الشخصي</a>
     <a class="sidebar-link" id="sidebarWrongs">أخطائي السابقة</a>
     <a class="sidebar-link" id="sidebarZtona">الزتونة والتوقعات</a>
+    <hr class="sidebar-divider">
+    <a class="sidebar-link" id="sidebarRescue">خطة الإنقاذ</a>
+    <a class="sidebar-link" id="sidebarLeaderMsg">رسالة الليدر</a>
   </nav>
 </aside>
 
@@ -1680,6 +1752,59 @@ function applyGuestRestrictions() {
   }
 }
 
+/* ============ renderComingSoon (NEW) ============ */
+function renderComingSoon() {
+  const items = APP_DATA.comingSoon || [];
+  const html = items.map(item => `
+    <div class="coming-card" data-id="${item.id}">
+      <div class="coming-badge">${item.enabled ? 'متاح' : 'قريباً'}</div>
+      <div class="coming-icon">${item.enabled ? '★' : '⏳'}</div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.desc)}</p>
+    </div>
+  `).join('');
+
+  const home = $('#comingGridHome');
+  if (home) home.innerHTML = html;
+
+  const full = $('#comingGridFull');
+  if (full) full.innerHTML = html;
+
+  $$('.coming-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.dataset.id;
+      const item = items.find(x => x.id === id);
+      if (item && item.enabled) {
+        showToast('الميزة متاحة الآن', 'success');
+      } else {
+        showToast('جاري تجهيز هذه الميزة وستُتاح للدفعة قريباً جداً', 'info');
+      }
+    };
+  });
+}
+
+/* ============ renderSubjectDropdowns (NEW) ============ */
+function renderSubjectDropdowns() {
+  const subjects = APP_DATA.subjects || {};
+  const options = Object.entries(subjects).map(([key, subj]) => 
+    `<option value="${key}">${escapeHtml(subj.name)}</option>`
+  ).join('');
+
+  const selects = [
+    'duelSubject', 'rescueSubject', 'bulkSubject', 'singleSubject',
+    'bankSubjectFilter', 'notesSubject', 'flashSubject', 'ztonaSubject'
+  ];
+
+  selects.forEach(id => {
+    const el = $('#' + id);
+    if (el) {
+      const currentVal = el.value;
+      el.innerHTML = options;
+      if (currentVal && subjects[currentVal]) el.value = currentVal;
+    }
+  });
+}
+
 async function renderSubjects() {
   const grid = $('#subjectGrid');
   let html = '';
@@ -1841,6 +1966,8 @@ function initNav() {
   $('#sidebarProfile').onclick = () => navigateTo('profile');
   $('#sidebarWrongs').onclick = () => navigateTo('wrongs');
   $('#sidebarZtona').onclick = () => navigateTo('ztona');
+  $('#sidebarRescue').onclick = () => { closeSidebar(); $('#rescueBtn').click(); };
+  $('#sidebarLeaderMsg').onclick = () => { closeSidebar(); openModal('leaderMsgModal'); };
 
   document.addEventListener('click', (e) => {
     const tab = e.target.closest('#detailTabs .tab');
@@ -2737,7 +2864,7 @@ async function submitDuel() {
   } else {
     resultHtml += `<p class="text-center mt-3 text-muted">في انتظار صاحبك يخلص...</p>`;
   }
-  resultHtml += `<button class="btn btn-primary btn-block mt-3" onclick="closeModal('duelRunnerModal');if(window.AppState.duelUnsubscribe)window.AppState.duelUnsubscribe();">تم</button>`;
+  resultHtml += `<button class="btn btn-primary btn-block mt-3" onclick="closeModal('duelRunnerModal');if(AppState.duelUnsubscribe)AppState.duelUnsubscribe();">تم</button>`;
   $('#duelRunnerBody').innerHTML = resultHtml;
 }
 
