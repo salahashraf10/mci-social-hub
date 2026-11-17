@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#0F172A" />
+<meta name="theme-color" content="#1E293B" />
 <title>MCI Social Hub — منصة الفرقة الثانية</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,48 +16,76 @@
 <style>
 :root {
   --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "MiSans", "IBM Plex Sans Arabic", "Cairo", sans-serif;
-  --bg: #F8FAFC; --bg-soft: #EEF2F7;
-  --card: #FFFFFF; --border: rgba(15,23,42,0.08);
-  --text: #0F172A; --text-muted: #475569;
-  --primary: #1D4ED8; --primary-soft: #DBEAFE;
-  --secondary: #F59E0B; --secondary-soft: #FEF3C7;
-  --success: #16A34A; --success-soft: #DCFCE7;
-  --danger: #DC2626; --danger-soft: #FEE2E2;
-  --warning: #D97706; --warning-soft: #FEF3C7;
-  --info: #0891B2; --info-soft: #CFFAFE;
-  --purple: #7C3AED; --purple-soft: #EDE9FE;
-  --gold: #EAB308; --gold-soft: #FEF08A;
-  --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
-  --shadow-md: 0 8px 24px rgba(15,23,42,0.08);
-  --shadow-lg: 0 20px 50px rgba(15,23,42,0.14);
-  --radius: 16px; --radius-sm: 10px; --radius-lg: 24px;
+  --bg: #F4F7FB; 
+  --bg-soft: #E2E8F0;
+  --card: #FFFFFF; 
+  --border: rgba(15,23,42,0.08);
+  --text: #1E293B; 
+  --text-muted: #64748B;
+  --primary: #2563EB; 
+  --primary-soft: #DBEAFE;
+  --secondary: #F59E0B; 
+  --secondary-soft: #FEF3C7;
+  --success: #10B981; 
+  --success-soft: #D1FAE5;
+  --danger: #EF4444; 
+  --danger-soft: #FEE2E2;
+  --warning: #F59E0B; 
+  --warning-soft: #FEF3C7;
+  --info: #06B6D4; 
+  --info-soft: #CFFAFE;
+  --purple: #8B5CF6; 
+  --purple-soft: #EDE9FE;
+  --gold: #EAB308; 
+  --gold-soft: #FEF08A;
+  --shadow-sm: 0 1px 3px rgba(15,23,42,0.06);
+  --shadow-md: 0 4px 15px rgba(15,23,42,0.08);
+  --shadow-lg: 0 10px 30px rgba(15,23,42,0.12);
+  --radius: 16px; 
+  --radius-sm: 10px; 
+  --radius-lg: 24px;
   --transition: 0.2s ease;
-  --ticker-bg: #0F172A; --ticker-text: #F8FAFC;
-  --grad-primary: linear-gradient(135deg, #1D4ED8, #7C3AED);
-  --grad-secondary: linear-gradient(135deg, #F59E0B, #DB2777);
-  --grad-success: linear-gradient(135deg, #16A34A, #0891B2);
+  --ticker-bg: #0F172A; 
+  --ticker-text: #F8FAFC;
+  --grad-primary: linear-gradient(135deg, #2563EB, #8B5CF6);
+  --grad-secondary: linear-gradient(135deg, #F59E0B, #EC4899);
+  --grad-success: linear-gradient(135deg, #10B981, #06B6D4);
   --grad-gold: linear-gradient(135deg, #FDE047, #EAB308, #CA8A04);
-  --grad-hero: linear-gradient(135deg, #1D4ED8 0%, #7C3AED 50%, #F59E0B 100%);
+  --grad-hero: linear-gradient(135deg, #2563EB 0%, #8B5CF6 50%, #F59E0B 100%);
 }
+
 [data-theme="dark"] {
-  --bg: #0F172A; --bg-soft: #111C30;
-  --card: #1E293B; --border: rgba(241,245,249,0.08);
-  --text: #F1F5F9; --text-muted: #94A3B8;
-  --primary: #3B82F6; --primary-soft: #1E3A8A;
-  --secondary: #FBBF24; --secondary-soft: #422006;
-  --success: #22C55E; --success-soft: #14532D;
-  --danger: #F87171; --danger-soft: #450A0A;
-  --warning: #FBBF24; --warning-soft: #422006;
-  --info: #22D3EE; --info-soft: #083344;
-  --purple: #A78BFA; --purple-soft: #2E1065;
-  --gold: #FDE047; --gold-soft: #422006;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
-  --shadow-lg: 0 20px 50px rgba(0,0,0,0.6);
-  --ticker-bg: #020617; --ticker-text: #E2E8F0;
+  --bg: #0F172A; 
+  --bg-soft: #1E293B;
+  --card: #1E293B; 
+  --border: rgba(241,245,249,0.08);
+  --text: #F8FAFC; 
+  --text-muted: #94A3B8;
+  --primary: #3B82F6; 
+  --primary-soft: #1E3A8A;
+  --secondary: #FBBF24; 
+  --secondary-soft: #422006;
+  --success: #34D399; 
+  --success-soft: #064E3B;
+  --danger: #F87171; 
+  --danger-soft: #450A0A;
+  --warning: #FBBF24; 
+  --warning-soft: #422006;
+  --info: #22D3EE; 
+  --info-soft: #083344;
+  --purple: #A78BFA; 
+  --purple-soft: #2E1065;
+  --gold: #FDE047; 
+  --gold-soft: #422006;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 15px rgba(0,0,0,0.5);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.7);
+  --ticker-bg: #020617; 
+  --ticker-text: #E2E8F0;
   --grad-primary: linear-gradient(135deg, #3B82F6, #A78BFA);
   --grad-hero: linear-gradient(135deg, #3B82F6 0%, #A78BFA 50%, #FBBF24 100%);
 }
+
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 html { scroll-behavior:smooth; -webkit-text-size-adjust: 100%; }
 body {
@@ -65,7 +93,7 @@ body {
   background: var(--bg); color: var(--text); line-height:1.7;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh; transition: background var(--transition), color var(--transition);
-  overflow-x: hidden; /* حل مشكلة اليمين والشمال */
+  overflow-x: hidden;
   width: 100%;
 }
 h1,h2,h3,h4,h5,h6,strong,b { font-weight:700; }
@@ -75,13 +103,11 @@ a { color:var(--primary); text-decoration:none; }
 ul { list-style:none; }
 ::selection { background: var(--primary); color:#fff; }
 
-/* Performance Helpers */
 #page-study, #page-exams, #page-duel, #page-leaderboard, #page-coming, #page-profile, #page-wrongs, #page-ztona, #page-subject-detail {
   content-visibility: auto;
   contain-intrinsic-size: 800px;
 }
 
-/* Utilities */
 .hidden { display:none !important; }
 .text-center { text-align:center; }
 .text-muted { color: var(--text-muted); }
@@ -93,7 +119,6 @@ ul { list-style:none; }
 .gap-1{gap:8px}.gap-2{gap:16px}.gap-3{gap:24px}
 .full{width:100%}.nowrap{white-space:nowrap}
 
-/* Buttons */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   padding:12px 22px;border-radius:var(--radius-sm);font-weight:600;
@@ -115,14 +140,12 @@ ul { list-style:none; }
 .icon-btn{width:42px;height:42px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;transition:var(--transition);background:var(--bg-soft);border:1px solid var(--border);font-size:1.1rem;font-weight:600}
 .icon-btn:hover{background:var(--primary-soft);color:var(--primary)}
 
-/* Ticker */
 .ticker{background:var(--ticker-bg);color:var(--ticker-text);overflow:hidden;white-space:nowrap;padding:9px 0;font-size:0.85rem;position:relative;z-index:60}
 .ticker-inner{display:inline-block;padding-right:100%;animation:tickerMove 40s linear infinite;will-change:transform}
 .ticker-inner span{margin:0 40px;font-weight:600}
 .ticker-inner span::before{content:"● ";color:var(--secondary);opacity:0.8}
 @keyframes tickerMove{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
 
-/* Header */
 .header{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--border);width:100%}
 .header-inner{max-width:1280px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;cursor:pointer}
@@ -139,7 +162,6 @@ ul { list-style:none; }
 .user-chip .avatar{width:28px;height:28px;border-radius:50%;background:var(--grad-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700}
 .xp-badge{background:var(--grad-secondary);color:#fff;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-right:4px}
 
-/* Sidebar */
 .sidebar-backdrop{position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:80;opacity:0;pointer-events:none;transition:opacity 0.2s}
 .sidebar-backdrop.active{opacity:1;pointer-events:auto}
 .sidebar{position:fixed;top:0;right:-320px;width:300px;height:100vh;background:var(--card);border-left:1px solid var(--border);z-index:81;display:flex;flex-direction:column;transition:right 0.25s ease;overflow-y:auto}
@@ -155,24 +177,20 @@ ul { list-style:none; }
 .sidebar-link:hover,.sidebar-link.active{background:var(--primary-soft);color:var(--primary)}
 .sidebar-divider{height:1px;background:var(--border);margin:10px 0;border:none}
 
-/* Sync */
 .sync-indicator{position:fixed;bottom:20px;right:20px;z-index:45;background:var(--card);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow-md);border:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:600}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted)}
 .sync-dot.online{background:var(--success)}
 .sync-dot.offline{background:var(--warning)}
 
-/* Resume Banner */
 .resume-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:70;background:var(--card);border:2px solid var(--warning);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:14px 20px;max-width:92vw;width:520px}
 .resume-banner-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .resume-banner-text{font-weight:600;font-size:0.9rem;flex:1;min-width:180px}
 .resume-banner-actions{display:flex;gap:8px}
 
-/* Layout */
 .container{max-width:1280px;margin:0 auto;padding:28px 22px 80px;width:100%}
 .section-title{font-size:1.55rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px}
 .section-sub{color:var(--text-muted);font-size:0.92rem;margin-bottom:22px}
 
-/* Hero */
 .hero{background:var(--grad-hero);color:#fff;border-radius:var(--radius-lg);padding:46px 34px;margin-bottom:30px;position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;inset:auto -60px -120px auto;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.18),transparent 70%)}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.18);padding:7px 16px;border-radius:999px;font-size:0.82rem;font-weight:600;margin-bottom:18px;border:1px solid rgba(255,255,255,0.25)}
@@ -182,18 +200,15 @@ ul { list-style:none; }
 .hero .btn-ghost{background:rgba(255,255,255,0.16);color:#fff;border-color:rgba(255,255,255,0.3)}
 .hero .btn-ghost:hover{background:rgba(255,255,255,0.28)}
 
-/* Grid & Cards */
 .grid{display:grid;gap:18px}
 .grid-2{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
 .grid-3{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
-.card{background:var(--card);border-radius:var(--radius);padding:22px;border:1px solid var(--border);box-shadow:var(--shadow-sm);position:relative}
-@media (hover:hover){.card{transition:var(--transition)}.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}}
+.card{background:var(--card);border-radius:var(--radius);padding:22px;border:1px solid var(--border);box-shadow:var(--shadow-sm);position:relative;transition:var(--transition)}
+@media (hover:hover){.card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}}
 
-/* Motivation Card */
 #motivationCard{background:var(--grad-primary);color:#fff;border:none}
 #motivationCard button{background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.3)}
 
-/* Countdown */
 .countdown-card{background:var(--card);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow-md);border:1px solid var(--border);margin-bottom:30px;text-align:center;position:relative;overflow:hidden}
 .countdown-card::before{content:"";position:absolute;top:0;right:0;bottom:0;width:4px;background:var(--grad-primary)}
 .countdown-card h3{font-size:1.05rem;color:var(--text-muted);margin-bottom:6px;font-weight:600}
@@ -205,14 +220,12 @@ ul { list-style:none; }
 .cd-lbl{font-size:0.78rem;color:var(--text-muted);margin-top:6px;font-weight:600}
 .countdown-done{font-size:1.3rem;font-weight:700;color:var(--success);padding:18px}
 
-/* Subject Cards */
 .subject-card{cursor:pointer;overflow:hidden}
 .subject-card .subject-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:700;background:var(--primary-soft);color:var(--primary);margin-bottom:14px}
 .subject-card h3{font-size:1.15rem;margin-bottom:6px}
 .subject-card p{font-size:0.85rem;color:var(--text-muted);margin-bottom:14px}
 .subject-card .subject-meta{display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:var(--text-muted);padding-top:14px;border-top:1px solid var(--border);gap:6px;flex-wrap:wrap}
 
-/* Badges */
 .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:600}
 .badge-primary{background:var(--primary-soft);color:var(--primary)}
 .badge-success{background:var(--success-soft);color:var(--success)}
@@ -220,7 +233,6 @@ ul { list-style:none; }
 .badge-danger{background:var(--danger-soft);color:var(--danger)}
 .badge-gold{background:var(--gold);color:#000;font-weight:800}
 
-/* Study Timer */
 .study-timer-card{background:var(--card);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow-md);border:1px solid var(--border);margin-bottom:20px;text-align:center;position:relative;overflow:hidden}
 .study-timer-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad-primary)}
 .study-timer{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--primary);line-height:1;margin:16px 0}
@@ -229,7 +241,6 @@ ul { list-style:none; }
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 1.5s infinite}
 @keyframes pulse{50%{opacity:0.5}}
 
-/* Branch Battle */
 .branch-battle{background:var(--card);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow-md);margin-bottom:20px}
 .branch-battle h3{font-size:1.15rem;margin-bottom:14px}
 .branch-row{display:grid;grid-template-columns:120px 1fr 60px;gap:12px;align-items:center;margin-bottom:12px}
@@ -242,17 +253,15 @@ ul { list-style:none; }
 .branch-row .br-pct{font-weight:700;font-size:0.9rem;text-align:center}
 .branch-battle .leader{background:var(--success-soft);color:var(--success);padding:8px 14px;border-radius:8px;text-align:center;font-weight:700;font-size:0.88rem;margin-top:12px}
 
-/* Poll */
 .poll-card{background:var(--card);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:20px}
 .poll-card h3{font-size:1.05rem;margin-bottom:14px}
 .poll-option{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:var(--transition);background:var(--bg);position:relative;overflow:hidden}
 .poll-option:hover{border-color:var(--primary)}
 .poll-option.voted{border-color:var(--primary);background:var(--primary-soft)}
-.poll-option .poll-fill{position:absolute;top:0;right:0;bottom:0;background:rgba(29,78,216,0.12);z-index:0;transition:width 0.6s}
+.poll-option .poll-fill{position:absolute;top:0;right:0;bottom:0;background:rgba(37,99,235,0.12);z-index:0;transition:width 0.6s}
 .poll-option .poll-label{position:relative;z-index:1;flex:1;font-weight:600;font-size:0.88rem}
 .poll-option .poll-pct{position:relative;z-index:1;font-weight:700;color:var(--primary);font-size:0.85rem}
 
-/* Modal */
 .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
 .modal-backdrop.active{opacity:1;pointer-events:auto}
 .modal{background:var(--card);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);border:1px solid var(--border);transform:translateY(20px);transition:transform 0.2s}
@@ -265,7 +274,6 @@ ul { list-style:none; }
 .modal-close:hover{background:var(--danger-soft);color:var(--danger)}
 .modal-body{padding:24px}
 
-/* Forms */
 .form-group{margin-bottom:16px}
 .form-group label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;color:var(--text-muted)}
 .form-control{width:100%;padding:12px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);font-size:0.92rem;transition:var(--transition);outline:none}
@@ -277,13 +285,11 @@ select.form-control{cursor:pointer}
 .form-error.show{display:block}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-/* Tabs */
 .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:22px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{padding:12px 18px;font-size:0.9rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;transition:var(--transition);white-space:nowrap;cursor:pointer;margin-bottom:-1px}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 
-/* Welcome */
 .welcome-screen{position:fixed;inset:0;background:var(--bg);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
 .welcome-inner{max-width:900px;width:100%;text-align:center}
 .welcome-logo{width:90px;height:90px;border-radius:24px;margin:0 auto 22px;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:700}
@@ -298,7 +304,6 @@ select.form-control{cursor:pointer}
 .path-card h3{font-size:1.2rem;margin-bottom:6px}
 .path-card p{font-size:0.85rem;color:var(--text-muted)}
 
-/* Profile Card */
 .profile-card{background:var(--card);border-radius:var(--radius-lg);padding:32px;border:1px solid var(--border);box-shadow:var(--shadow-md);text-align:center;background-image: var(--grad-hero);color: #fff;position:relative;overflow:hidden;margin-bottom:20px;}
 .profile-avatar{width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.2);border:4px solid rgba(255,255,255,0.5);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;color:#fff;}
 .profile-name{font-size:1.5rem;font-weight:700;margin-bottom:4px;}
@@ -306,7 +311,6 @@ select.form-control{cursor:pointer}
 .profile-xp{font-size:2rem;font-weight:700;margin-bottom:4px;}
 .profile-xp-label{font-size:0.9rem;opacity:0.8;}
 
-/* Toast */
 .toast-container{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:10px;pointer-events:none;width:min(92vw,460px)}
 .toast{background:var(--card);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow-lg);border:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;font-size:0.9rem;font-weight:500;animation:toastIn 0.25s ease;pointer-events:auto;border-right:4px solid var(--primary)}
 .toast.success{border-right-color:var(--success)}
@@ -316,7 +320,6 @@ select.form-control{cursor:pointer}
 .toast .toast-icon{font-size:1.05rem;flex-shrink:0;font-weight:700}
 @keyframes toastIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
 
-/* Loading */
 .loading-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.9);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:20px}
 .loading-overlay.active{display:flex}
 .spinner{width:80px;height:80px;border:4px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px}
@@ -326,13 +329,11 @@ select.form-control{cursor:pointer}
 .loading-progress{width:min(80vw,360px);height:6px;background:rgba(255,255,255,0.15);border-radius:99px;overflow:hidden;margin-top:20px}
 .loading-progress-fill{height:100%;background:linear-gradient(90deg,#F59E0B,#DB2777,#7C3AED);width:0%;transition:width 0.2s linear;border-radius:99px}
 
-/* Empty State */
 .empty-state{text-align:center;padding:60px 24px;background:var(--card);border-radius:var(--radius-lg);border:2px dashed var(--border)}
 .empty-state .empty-icon{font-size:2.5rem;margin-bottom:16px;font-weight:700;color:var(--text-muted)}
 .empty-state h3{font-size:1.2rem;margin-bottom:8px}
 .empty-state p{color:var(--text-muted);font-size:0.92rem;max-width:480px;margin:0 auto}
 
-/* Accordion & Flashcards */
 .accordion-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;background:var(--card)}
 .accordion-header{padding:16px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:600;transition:var(--transition);user-select:none}
 .accordion-header:hover{background:var(--bg-soft)}
@@ -351,7 +352,6 @@ select.form-control{cursor:pointer}
 .flashcard-front small{color:var(--text-muted);font-size:0.75rem}
 .flashcard-back p{font-size:0.9rem}
 
-/* Exam */
 .exam-layout{display:grid;grid-template-columns:1fr 260px;gap:20px}
 .exam-timer-bar{height:8px;background:var(--bg-soft);border-radius:99px;overflow:hidden;margin-bottom:18px}
 .exam-timer-fill{height:100%;background:var(--success);border-radius:99px;transition:width 1s linear,background 0.4s}
@@ -385,7 +385,6 @@ select.form-control{cursor:pointer}
 .nav-dot.white{background:var(--bg);border:1px solid var(--border)}
 .nav-dot.yellow{background:var(--secondary)}
 
-/* Result & Certificate */
 .result-hero{text-align:center;padding:34px 22px;border-radius:var(--radius-lg);background:var(--grad-hero);color:#fff;margin-bottom:22px;position:relative;overflow:hidden}
 .result-hero .score-num{font-size:3.4rem;font-weight:700;line-height:1}
 .result-hero .score-pct{font-size:1.4rem;opacity:0.92;margin-top:6px}
@@ -401,8 +400,7 @@ select.form-control{cursor:pointer}
 .answer-review .ar-opt.wrong{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);font-weight:600}
 .answer-review .ar-explain{margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--secondary-soft);font-size:0.84rem;color:var(--warning);border-right:3px solid var(--secondary)}
 
-/* Certificate */
-.certificate-card{background:#fff;color:#0F172A;border-radius:var(--radius-lg);padding:40px 30px;text-align:center;border:8px solid var(--gold);box-shadow:0 10px 30px rgba(234,179,8,0.3);position:relative;overflow:hidden;}
+.certificate-card{background:#fff;color:#1E293B;border-radius:var(--radius-lg);padding:40px 30px;text-align:center;border:8px solid var(--gold);box-shadow:0 10px 30px rgba(234,179,8,0.3);position:relative;overflow:hidden;}
 .certificate-card::before{content:"★";position:absolute;top:10px;left:20px;font-size:3rem;color:var(--gold);opacity:0.2;}
 .certificate-card .cert-logo{font-size:1.5rem;font-weight:800;color:var(--primary);margin-bottom:16px;}
 .certificate-card .cert-title{font-size:1.8rem;font-weight:800;color:var(--gold);margin-bottom:16px;}
@@ -411,7 +409,6 @@ select.form-control{cursor:pointer}
 .certificate-card .cert-score strong{font-size:1.8rem;color:var(--success);}
 .certificate-card .cert-seal{margin-top:20px;font-size:0.9rem;font-weight:600;color:var(--primary);}
 
-/* Footer */
 .footer{background:var(--card);border-top:1px solid var(--border);padding:30px 22px 24px;text-align:center}
 .footer-inner{max-width:1280px;margin:0 auto}
 .footer-brand{font-weight:700;font-size:1rem;margin-bottom:6px}
@@ -420,13 +417,11 @@ select.form-control{cursor:pointer}
 .footer-secret{display:inline-block;cursor:pointer;padding:2px 6px;border-radius:4px;transition:var(--transition);font-weight:600}
 .footer-secret:hover{background:var(--primary-soft)}
 
-/* Guest Lock */
 .guest-lock{text-align:center;padding:44px 24px;background:var(--card);border-radius:var(--radius-lg);border:2px dashed var(--border)}
 .guest-lock .lock-icon{font-size:2rem;margin-bottom:14px;font-weight:700;color:var(--warning)}
 .guest-lock h3{font-size:1.1rem;margin-bottom:8px}
 .guest-lock p{color:var(--text-muted);font-size:0.9rem;max-width:440px;margin:0 auto 18px}
 
-/* Coming Soon */
 .coming-card{background:var(--card);border-radius:var(--radius);padding:24px 20px;border:1px solid var(--border);position:relative;overflow:hidden;opacity:0.85;transition:var(--transition);cursor:pointer}
 .coming-card:hover{opacity:1;transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .coming-card .coming-badge{position:absolute;top:14px;left:14px;background:var(--secondary-soft);color:var(--warning);padding:4px 12px;border-radius:999px;font-size:0.72rem;font-weight:700}
@@ -434,7 +429,6 @@ select.form-control{cursor:pointer}
 .coming-card h3{font-size:1rem;margin-bottom:6px}
 .coming-card p{font-size:0.83rem;color:var(--text-muted)}
 
-/* Admin */
 .admin-tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:22px;overflow-x:auto;scrollbar-width:none}
 .admin-tabs::-webkit-scrollbar{display:none}
 .admin-tab{padding:10px 16px;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
@@ -447,7 +441,6 @@ select.form-control{cursor:pointer}
 .qbank-item .qb-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:0.75rem;color:var(--text-muted)}
 .qbank-item .qb-actions{display:flex;gap:6px;margin-top:8px}
 
-/* Readiness */
 .readiness{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg-soft);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:10px}
 .readiness-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;color:#fff;flex-shrink:0;background:conic-gradient(var(--success) var(--pct,0%), var(--bg-soft) 0)}
 .readiness-circle span{background:var(--card);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);font-size:0.8rem}
@@ -455,7 +448,6 @@ select.form-control{cursor:pointer}
 .readiness-info strong{font-size:0.9rem;display:block;margin-bottom:2px}
 .readiness-info small{font-size:0.78rem;color:var(--text-muted)}
 
-/* Duel */
 .duel-card{background:var(--grad-primary);color:#fff;border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-md);margin-bottom:20px}
 .duel-card h3{font-size:1.2rem;margin-bottom:6px}
 .duel-card p{font-size:0.85rem;opacity:0.9;margin-bottom:16px}
@@ -469,7 +461,6 @@ select.form-control{cursor:pointer}
 .duel-wait h3{font-size:1.15rem;margin-bottom:8px}
 .duel-wait p{color:var(--text-muted);font-size:0.9rem}
 
-/* Notification */
 .notif-badge{position:absolute;top:-4px;left:-4px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center}
 .notif-item{padding:12px 14px;border-bottom:1px solid var(--border);font-size:0.85rem}
 .notif-item:last-child{border-bottom:none}
@@ -477,7 +468,6 @@ select.form-control{cursor:pointer}
 .notif-item strong{display:block;font-size:0.85rem;margin-bottom:2px}
 .notif-item small{font-size:0.72rem;color:var(--text-muted)}
 
-/* Ztona */
 .ztona-item{background:var(--card);border:2px solid var(--gold);border-radius:var(--radius);padding:16px;margin-bottom:12px;position:relative}
 .ztona-item.important{background:var(--gold-soft);color:#000;border-color:#CA8A04}
 [data-theme="dark"] .ztona-item.important{color:#FDE047}
@@ -487,7 +477,6 @@ select.form-control{cursor:pointer}
 .ztona-lock .lock-icon{font-size:3rem;color:var(--gold);margin-bottom:16px}
 .ztona-lock h3{font-size:1.2rem;margin-bottom:8px;color:var(--gold)}
 
-/* Responsive */
 @media (max-width: 1000px){.header-nav{display:none}.brand-text small{display:none}}
 @media (max-width: 900px){.exam-layout{grid-template-columns:1fr}.welcome-paths-3{grid-template-columns:1fr}}
 @media (max-width: 640px){
@@ -508,21 +497,17 @@ select.form-control{cursor:pointer}
   .sync-indicator{font-size:0.7rem;padding:4px 10px;bottom:12px;right:12px}
   .resume-banner{width:96vw;top:56px;padding:12px 16px}
 }
-
 @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .page-section{animation:fadeInUp 0.3s ease-out}
-
 @media print{.header,.footer,.ticker,.btn,.modal-close,.sync-indicator,.resume-banner,.sidebar,.sidebar-backdrop{display:none!important}.modal-backdrop{position:static;background:none}.modal{box-shadow:none;max-width:100%}}
 </style>
 </head>
-  <body>
+<body>
 
-<!-- TICKER -->
 <div class="ticker" id="ticker">
   <div class="ticker-inner" id="tickerInner"><span>مرحباً بكم في MCI Social Hub — الفرقة الثانية</span></div>
 </div>
 
-<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
     <div class="flex center gap-2">
@@ -559,7 +544,6 @@ select.form-control{cursor:pointer}
   </div>
 </header>
 
-<!-- SIDEBAR (HAMBURGER MENU) -->
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
@@ -587,13 +571,11 @@ select.form-control{cursor:pointer}
   </nav>
 </aside>
 
-<!-- SYNC -->
 <div class="sync-indicator" id="syncIndicator">
   <span class="sync-dot" id="syncDot"></span>
   <span id="syncText">جاري الاتصال...</span>
 </div>
 
-<!-- RESUME BANNER -->
 <div class="resume-banner hidden" id="resumeBanner">
   <div class="resume-banner-inner">
     <div class="resume-banner-text" id="resumeBannerText">لديك امتحان غير مكتمل</div>
@@ -604,7 +586,6 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
-<!-- WELCOME -->
 <div class="welcome-screen" id="welcomeScreen">
   <div class="welcome-inner">
     <div class="welcome-logo">MCI</div>
@@ -631,10 +612,8 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
-<!-- MAIN APP -->
 <main class="container" id="mainApp" style="display:none;">
 
-  <!-- HOME -->
   <section id="page-home">
     <div class="hero">
       <div class="hero-badge">مبادرة طلابية رائدة تحت إشراف ليدر الدفعة: صلاح أشرف</div>
@@ -708,14 +687,12 @@ select.form-control{cursor:pointer}
     <div class="grid grid-3" id="comingGridHome"></div>
   </section>
 
-  <!-- STUDY -->
   <section id="page-study" style="display:none;">
     <h2 class="section-title">المذاكرة التفاعلية</h2>
     <p class="section-sub">اختر مادة للبدء في المراجعة</p>
     <div class="grid grid-3" id="studySubjectGrid"></div>
   </section>
 
-  <!-- EXAMS -->
   <section id="page-exams" style="display:none;">
     <h2 class="section-title">محاكي الامتحانات</h2>
     <p class="section-sub">اختر المادة ونمط الامتحان</p>
@@ -728,7 +705,6 @@ select.form-control{cursor:pointer}
     <div class="grid grid-3" id="examSubjectGrid"></div>
   </section>
 
-  <!-- SUBJECT DETAIL (SPA) -->
   <section id="page-subject-detail" style="display:none;">
     <div class="flex between center mb-3 wrap gap-2">
       <div>
@@ -748,7 +724,6 @@ select.form-control{cursor:pointer}
     <div id="detailFlashcardsPanel" style="display:none;"></div>
   </section>
 
-  <!-- DUEL -->
   <section id="page-duel" style="display:none;">
     <h2 class="section-title">مقارنة المستويات — تحدي 1v1</h2>
     <p class="section-sub">حدي صديقك، جاوبوا نفس الـ 10 أسئلة في نفس اللحظة</p>
@@ -778,7 +753,6 @@ select.form-control{cursor:pointer}
     <div id="duelActiveWrap" class="mt-3"></div>
   </section>
 
-  <!-- LEADERBOARD -->
   <section id="page-leaderboard" style="display:none;">
     <h2 class="section-title">لوحة الشرف</h2>
     <p class="section-sub">أفضل الطلاب في كل مادة</p>
@@ -791,14 +765,12 @@ select.form-control{cursor:pointer}
     <div id="leaderboardContent"></div>
   </section>
 
-  <!-- COMING -->
   <section id="page-coming" style="display:none;">
     <h2 class="section-title">قريباً</h2>
     <p class="section-sub">ميزات جاري تجهيزها وستُتاح للدفعة قريباً جداً</p>
     <div class="grid grid-3" id="comingGridFull"></div>
   </section>
 
-  <!-- PROFILE -->
   <section id="page-profile" style="display:none;">
     <h2 class="section-title">ملفي الشخصي</h2>
     <p class="section-sub">إحصائياتك وبياناتك</p>
@@ -807,14 +779,12 @@ select.form-control{cursor:pointer}
     <div class="grid grid-3" id="profileStats"></div>
   </section>
 
-  <!-- WRONGS -->
   <section id="page-wrongs" style="display:none;">
     <h2 class="section-title">أخطائي السابقة</h2>
     <p class="section-sub">الأسئلة اللي غلطت فيها — امتحن نفسك فيها لحد ما تثبتها</p>
     <div class="grid grid-3" id="wrongsSubjectGrid"></div>
   </section>
 
-  <!-- ZTONA -->
   <section id="page-ztona" style="display:none;">
     <h2 class="section-title">الزتونة والتوقعات</h2>
     <p class="section-sub">أهم النقاط المتوقعة في كل مادة — بيتكرر في الفاينل</p>
@@ -823,7 +793,6 @@ select.form-control{cursor:pointer}
 
 </main>
 
-<!-- FOOTER -->
 <footer class="footer" id="mainFooter" style="display:none;">
   <div class="footer-inner">
     <div class="footer-brand">MCI Social Hub</div>
@@ -835,7 +804,6 @@ select.form-control{cursor:pointer}
   </div>
 </footer>
 
-<!-- TOASTS & LOADING -->
 <div class="toast-container" id="toastContainer"></div>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -844,8 +812,6 @@ select.form-control{cursor:pointer}
   <div class="loading-sub">لحظات من فضلك</div>
   <div class="loading-progress"><div class="loading-progress-fill" id="loadingProgress"></div></div>
 </div>
-
-<!-- ==================== MODALS ==================== -->
 
 <div class="modal-backdrop" id="leaderMsgModal">
   <div class="modal">
@@ -1144,12 +1110,8 @@ select.form-control{cursor:pointer}
     </div>
   </div>
 </div>
-    <script>
-/* =========================================================
-   MCI Social Hub — App Logic (Single File)
-   ========================================================= */
 
-/* ============ Firebase ============ */
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyABaXzMUDHKgCmme8EC71Dc-qRTACFucVE",
   authDomain: "mci-social-hub.firebaseapp.com",
@@ -1168,7 +1130,6 @@ try {
   }
 } catch (e) { console.warn('Firebase init failed', e); }
 
-/* ============ APP DATA ============ */
 const APP_DATA = {
   branches: {
     MIS: { name: 'نظم معلومات (MIS)', exams: [
@@ -1225,7 +1186,6 @@ const APP_DATA = {
   ]
 };
 
-/* ============ Local Storage ============ */
 const Store = (() => {
   const P = 'mcis_';
   return {
@@ -1235,7 +1195,6 @@ const Store = (() => {
   };
 })();
 
-/* ============ Cloud Layer ============ */
 const Cloud = (() => {
   let online = firebaseReady;
   const cache = { questions: {}, notes: {}, flashcards: {}, ztona: {} };
@@ -1531,7 +1490,6 @@ const Cloud = (() => {
   };
 })();
 
-/* ============ State ============ */
 const AppState = {
   user: null,
   currentPage: 'home',
@@ -1542,7 +1500,6 @@ const AppState = {
   duelUnsubscribe: null
 };
 
-/* ============ Utils ============ */
 function $(s, c=document) { return c.querySelector(s); }
 function $$(s, c=document) { return Array.from(c.querySelectorAll(s)); }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1564,7 +1521,6 @@ function emptyState(title, msg) {
   return `<div class="empty-state"><div class="empty-icon">...</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(msg)}</p></div>`;
 }
 
-/* ============ Theme ============ */
 function initTheme() {
   const saved = Store.get('theme', null);
   const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -1581,7 +1537,6 @@ function toggleTheme() {
   AppState.theme = n; Store.set('theme', n); applyTheme(n);
 }
 
-/* ============ Auth ============ */
 async function registerUserWithLoading(name, branch, pin, text) {
   const overlay = $('#loadingOverlay');
   const prog = $('#loadingProgress');
@@ -1642,7 +1597,6 @@ function restoreSession() {
   return false;
 }
 
-/* ============ After Login ============ */
 async function afterLogin() {
   $('#welcomeScreen').style.display = 'none';
   $('#mainApp').style.display = 'block';
@@ -1684,7 +1638,6 @@ async function afterLogin() {
   }
 }
 
-/* ============ UI Rendering ============ */
 function renderUserChip() {
   if (!AppState.user) return;
   const isGuest = AppState.user.role === 'guest';
@@ -1727,7 +1680,6 @@ function applyGuestRestrictions() {
   }
 }
 
-/* ============ Subjects ============ */
 async function renderSubjects() {
   const grid = $('#subjectGrid');
   let html = '';
@@ -1801,7 +1753,6 @@ async function renderExamSubjects() {
   });
 }
 
-/* ============ Subject Page (SPA) ============ */
 async function openSubjectPage(sid) {
   AppState.currentSubject = sid;
   const subj = APP_DATA.subjects[sid];
@@ -1859,7 +1810,6 @@ async function openSubjectPage(sid) {
   navigateTo('subject-detail');
 }
 
-/* ============ Navigation ============ */
 function navigateTo(page) {
   AppState.currentPage = page;
   ['home','study','exams','duel','leaderboard','coming','profile','wrongs','ztona','subject-detail'].forEach(p => {
@@ -1902,7 +1852,6 @@ function initNav() {
   });
 }
 
-/* ============ Sidebar ============ */
 function openSidebar() { $('#sidebar').classList.add('active'); $('#sidebarBackdrop').classList.add('active'); }
 function closeSidebar() { $('#sidebar').classList.remove('active'); $('#sidebarBackdrop').classList.remove('active'); }
 function initSidebar() {
@@ -1911,7 +1860,6 @@ function initSidebar() {
   $('#sidebarBackdrop').onclick = closeSidebar;
 }
 
-/* ============ Profile ============ */
 async function renderProfile() {
   if (!AppState.user || AppState.user.role === 'guest') return;
   const scores = (await Cloud.getScores()).filter(s => s.userName === AppState.user.name);
@@ -1934,7 +1882,6 @@ async function renderProfile() {
   `;
 }
 
-/* ============ Wrong Questions Bank ============ */
 async function renderWrongsPage() {
   const grid = $('#wrongsSubjectGrid');
   const wrongQs = AppState.user.wrongQuestions || [];
@@ -1994,7 +1941,6 @@ async function startWrongExam(sid) {
   launchExamRunner();
 }
 
-/* ============ Ztona Page ============ */
 async function renderZtonaPage() {
   const grid = $('#ztonaSubjectGrid');
   let html = '';
@@ -2032,7 +1978,6 @@ async function showZtonaModal(sid) {
   openModal('shareCardModal');
 }
 
-/* ============ Exam Engine ============ */
 async function openExamSetup(sid) {
   const subj = APP_DATA.subjects[sid];
   const qs = await Cloud.getQuestions(sid);
@@ -2382,7 +2327,6 @@ function retryWrong(r) {
   launchExamRunner();
 }
 
-/* ============ Countdown ============ */
 let cdTimer = null;
 function startCountdown() {
   if (cdTimer) clearInterval(cdTimer);
@@ -2417,7 +2361,6 @@ function updateCountdown() {
   else $('#nightBeforeWrap').classList.add('hidden');
 }
 
-/* ============ Study Timer ============ */
 let studyTimerState = { running: false, remaining: 25*60, mode: 'study' };
 let studyTimerInterval = null;
 function initStudyTimer() {
@@ -2456,7 +2399,6 @@ function initStudyTimer() {
   }
 }
 
-/* ============ Heartbeat ============ */
 let heartbeatInterval = null;
 function startHeartbeat() {
   if (!AppState.user) return;
@@ -2473,7 +2415,6 @@ async function updateLiveStudentsCount() {
   setTimeout(updateLiveStudentsCount, 30000);
 }
 
-/* ============ Notifications ============ */
 async function notifyAllStudents(msg) {
   await Cloud.pushNotification(msg);
   showToast(msg, 'info', 5000);
@@ -2499,7 +2440,6 @@ function checkNotifications() {
   };
 }
 
-/* ============ Readiness ============ */
 async function updateReadiness() {
   if (!AppState.user || AppState.user.role === 'guest') return;
   const scores = (await Cloud.getScores()).filter(s => s.userName === AppState.user.name);
@@ -2521,7 +2461,6 @@ async function updateReadiness() {
   $('#readinessSection').innerHTML = html;
 }
 
-/* ============ Branch Battle ============ */
 async function updateBranchBattle() {
   const scores = await Cloud.getScores();
   const branches = ['MIS', 'Marketing', 'Accounting'];
@@ -2548,7 +2487,6 @@ async function updateBranchBattle() {
   $('#branchBattleContent').innerHTML = html;
 }
 
-/* ============ Poll ============ */
 async function renderPoll() {
   const poll = await Cloud.getConfig('activePoll', null);
   if (!poll) { $('#pollWrap').innerHTML = ''; return; }
@@ -2581,7 +2519,6 @@ async function renderPoll() {
   }
 }
 
-/* ============ Rescue ============ */
 function initRescue() {
   $('#rescueBtn').onclick = () => {
     if (AppState.user?.role === 'guest') return showToast('سجل حسابك أول', 'warning');
@@ -2632,7 +2569,6 @@ function showRescuePlan(plan) {
   $('#rescuePlanBody').innerHTML = html;
 }
 
-/* ============ Duel ============ */
 function initDuel() {
   $('#duelCreateBtn').onclick = async () => {
     if (AppState.user?.role === 'guest') return showToast('سجل حسابك أول', 'warning');
@@ -2805,7 +2741,6 @@ async function submitDuel() {
   $('#duelRunnerBody').innerHTML = resultHtml;
 }
 
-/* ============ Motivation ============ */
 function setRandomMotivation() {
   const list = APP_DATA.motivations;
   const pick = () => list[Math.floor(Math.random()*list.length)];
@@ -2813,7 +2748,6 @@ function setRandomMotivation() {
   $('#newMotivationBtn').onclick = () => $('#motivationText').textContent = pick();
 }
 
-/* ============ Leaderboard ============ */
 async function renderLeaderboard() {
   const scores = await Cloud.getScores();
   const users = await Cloud.getUsers();
@@ -2841,7 +2775,6 @@ async function renderLeaderboard() {
   container.innerHTML = html;
 }
 
-/* ============ Night Before ============ */
 function initNightBefore() {
   $('#nightBeforeBtn')?.addEventListener('click', async () => {
     if (AppState.user?.role === 'guest') return showToast('سجل حسابك أول', 'warning');
@@ -2866,7 +2799,6 @@ function initNightBefore() {
   });
 }
 
-/* ============ Ask Salah ============ */
 function initAskSalah() {
   $('#askSalahBtn').onclick = () => {
     if (AppState.user?.role === 'guest') return showToast('سجل حسابك أول', 'warning');
@@ -2886,7 +2818,6 @@ function initAskSalah() {
   };
 }
 
-/* ============ Auth Handlers ============ */
 function initAuthHandlers() {
   $('#registerCard').onclick = () => openModal('registerModal');
   $('#guestCard').onclick = () => openModal('guestBranchModal');
@@ -2931,7 +2862,6 @@ function initAuthHandlers() {
   };
 }
 
-/* ============ Secret Admin ============ */
 let secretClicks = 0, secretTimer = null;
 function initSecretAdmin() {
   $('#secretTrigger').onclick = () => {
@@ -2954,7 +2884,6 @@ function initSecretAdmin() {
   };
 }
 
-/* ============ Admin Dashboard ============ */
 function initAdminDashboard() {
   $$('.admin-tab').forEach(t => t.onclick = () => {
     $$('.admin-tab').forEach(x => x.classList.remove('active'));
@@ -3220,7 +3149,6 @@ window.resolveReportAdmin = async function(id) {
   showToast('تم الحل', 'success');
 };
 
-/* ============ Ticker ============ */
 async function loadTicker() {
   const msgs = await Cloud.getTicker();
   renderTicker(msgs);
@@ -3230,7 +3158,6 @@ function renderTicker(msgs) {
   $('#tickerInner').innerHTML = msgs.map(m => `<span>${escapeHtml(m)}</span>`).join('');
 }
 
-/* ============ Resume Banner ============ */
 function checkResumeBanner() {
   const saved = Store.get('activeExam', null);
   if (!saved) return;
@@ -3248,10 +3175,8 @@ function checkResumeBanner() {
   };
 }
 
-/* ============ Leader Msg ============ */
 function initLeaderMsg() { $('#leaderMsgBtn').onclick = () => openModal('leaderMsgModal'); }
 
-/* ============ Init ============ */
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initModals();
