@@ -3825,7 +3825,180 @@ $('#ghExit').onclick=()=>{AppState.user=G.__real;G.__ghost=false;G.__admin=true;
 </script>
 
 
+<style>
+.fr-fire{box-shadow:0 0 0 4px #f97316,0 0 22px #ef4444!important}
+.fr-rainbow{box-shadow:0 0 0 4px #ec4899,0 0 0 8px #3b82f6,0 0 0 12px #10b981!important}
+.fr-diamond{box-shadow:0 0 0 4px #67e8f9,0 0 26px #a5f3fc!important}
+#trashTab,#adminPanelTrash{display:none!important}
+</style>
+<script>
+(()=>{
+const G=window,norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+const isStu=()=>AppState.user?.role==='student'&&!G.__ghost;
+const usave=()=>{Store.set('session',AppState.user);Cloud.saveUser(AppState.user);};
+const BR={MIS:'نظم معلومات',Marketing:'تسويق',Accounting:'محاسبة'};
+const TOUR_FROM=new Date('2026-11-18').getTime();
 
+/* إلغاء سلة المهملات + تخفيف Firebase */
+const _sc=Cloud.saveConfig,_gc=Cloud.getConfig,cc={},CK=['maintenance','forceMsg','leagues'];
+Cloud.saveConfig=async(k,v)=>{if(k==='trash')return;delete cc[k];return _sc(k,v);};
+Cloud.getConfig=async(k,f)=>{if(k==='trash')return [];
+ if(!G.__admin&&CK.includes(k)&&cc[k]&&Date.now()-cc[k].t<12e4)return cc[k].v;
+ const v=await _gc(k,f);cc[k]={v,t:Date.now()};return v;};
+let cu,cs,tu=0,ts=0;
+const _gu=Cloud.getUsers,_gs=Cloud.getScores,_su=Cloud.saveUser,_ss=Cloud.saveScore,_dl=Cloud.deleteUser;
+Cloud.getUsers=async()=>{if(!G.__admin&&cu&&Date.now()-tu<12e4)return cu;cu=await _gu();tu=Date.now();return cu;};
+Cloud.getScores=async()=>{if(!G.__admin&&cs&&Date.now()-ts<12e4)return cs;cs=await _gs();ts=Date.now();return cs;};
+Cloud.saveUser=async u=>{tu=0;return _su(u);};
+Cloud.saveScore=async s=>{ts=0;return _ss(s);};
+Cloud.deleteUser=async id=>{tu=0;const r=await _dl(id);tu=0;return r;};
+startHeartbeat=()=>{if(!AppState.user||AppState.user.role==='guest')return;clearInterval(heartbeatInterval);
+ const s=()=>Cloud.sendHeartbeat(AppState.user.id);s();heartbeatInterval=setInterval(s,18e4);};
+updateLiveStudentsCount=async()=>{const el=$('#liveStudentsCount');if(!el)return;
+ if(AppState.currentPage==='home'||!el.dataset.n){el.textContent=(await Cloud.getActiveStudentsCount())+' طالب';el.dataset.n=1;}
+ if(!G.__lsc){G.__lsc=1;setInterval(updateLiveStudentsCount,18e4);}};
+
+/* الدخول والتسجيل دايماً ببيانات طازة */
+loginUserByPin=async pin=>(await _gu()).find(u=>u.pin===pin)||null;
+const _ru=registerUser;
+registerUser=async(n,b,p)=>{const us=await _gu();
+ if(us.some(x=>norm(x.name)===norm(n)))return{ok:false,error:'الاسم ده مسجل بالفعل'};
+ tu=0;return _ru(n,b,p);};
+
+/* نافذة عامة + شاشة الجولة */
+document.body.insertAdjacentHTML('beforeend',`
+<div class="modal-backdrop" id="p4Modal"><div class="modal"><div class="modal-header"><h3 id="p4Title"></h3><button class="modal-close" data-close="p4Modal">×</button></div><div class="modal-body" id="p4Body"></div></div></div>
+<div class="ov hidden" id="tourOv" style="z-index:465;background:rgba(15,23,42,.92);color:#fff"><div style="max-width:380px"><div id="tourE" style="font-size:4rem"></div><h2 id="tourH"></h2><p id="tourP" class="mt-1"></p><div class="flex gap-1 mt-2" style="justify-content:center"><button class="btn btn-ghost btn-sm" id="tourSkip" style="color:#fff">تخطي</button><button class="btn btn-primary btn-sm" id="tourNext">التالي</button></div></div></div>`);
+const modal=(t,h)=>{$('#p4Title').textContent=t;$('#p4Body').innerHTML=h;openModal('p4Modal');};
+
+/* سبب الحظر */
+const uidOf=it=>((it.querySelector('.btn-danger')?.getAttribute('onclick')||'').match(/'([^']+)'/)||[])[1];
+const hook=()=>$$('#stList .qbank-item').forEach(it=>{const b=it.querySelector('.banBtn');if(!b||b.dataset.p4)return;b.dataset.p4=1;const id=uidOf(it);
+ b.onclick=async()=>{const u=Store.get('users',[]).find(x=>x.id===id);if(!u)return;
+  if(u.banned){u.banned=false;u.banReason='';}
+  else{const r=prompt('سبب الحظر (هيظهر للطالب):','');if(r===null)return;u.banned=true;u.banReason=r.trim();}
+  await Cloud.saveUser(u);showToast(u.banned?'تم الحظر':'تم فك الحظر','success');renderAdminStats();};});
+new MutationObserver(hook).observe($('#adminStatsContent'),{childList:true,subtree:true});
+setInterval(async()=>{const o=$('#banOverlay'),p=o?.querySelector('p');
+ if(!o||!p||o.classList.contains('hidden')||!AppState.user)return;
+ try{let d;if(firebaseReady)d=(await db.collection('users').doc(AppState.user.id).get()).data();
+  else d=Store.get('users',[]).find(x=>x.id===AppState.user.id);
+  p.textContent=d?.banReason?'السبب: '+d.banReason:'تواصل مع ليدر الدفعة';}catch(e){}},5000);
+
+/* إشعار لشعبة بعينها */
+const vis=n=>!n.branch||n.branch===AppState.user?.branch;
+updateNotifBadge=()=>{const c=Store.get('notifications',[]).filter(vis).filter(n=>!n.read).length,b=$('#notifCount');
+ if(c>0){b.textContent=c;b.classList.remove('hidden');}else b.classList.add('hidden');};
+const _gn=Cloud.getNotifications;Cloud.getNotifications=async()=>(await _gn()).filter(vis);
+const _ia=initAdminDashboard;
+initAdminDashboard=()=>{_ia();if($('#brSend'))return;
+ $('#broadcastBtn').insertAdjacentHTML('afterend',`<div class="form-row mt-2"><select class="form-control" id="brSel">${Object.entries(BR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn btn-secondary" id="brSend">إرسال لهذه الشعبة فقط</button></div>`);
+ $('#brSend').onclick=async()=>{const m=$('#broadcastMsg').value.trim();if(!m)return showToast('اكتب الرسالة','warning');
+  const n={msg:m,branch:$('#brSel').value,date:new Date().toISOString(),createdAt:Date.now(),read:false};
+  const l=Store.get('notifications',[]);l.unshift(n);Store.set('notifications',l.slice(0,50));
+  if(firebaseReady)try{await db.collection('notifications').add(n);}catch(e){}
+  $('#broadcastMsg').value='';showToast('تم الإرسال لشعبة '+BR[n.branch],'success');};};
+
+/* تغيير الاسم / خروج / حذف الحساب */
+async function rename(nn){const u=AppState.user;nn=nn.trim().replace(/\s+/g,' ');
+ if(nn.split(' ').length<2)return showToast('اكتب الاسم الثلاثي','warning');
+ if(nn===u.name)return showToast('ده نفس اسمك الحالي','warning');
+ const left=Math.ceil(((u.nameChangedAt||0)+30*864e5-Date.now())/864e5);
+ if(left>0)return showToast(`تقدر تغيّر اسمك بعد ${left} يوم`,'warning');
+ if((await _gu()).some(x=>x.id!==u.id&&norm(x.name)===norm(nn)))return showToast('الاسم ده مستخدم بالفعل','error');
+ const old=u.name;u.name=nn;u.nameChangedAt=Date.now();
+ const sc=Store.get('scores',[]);sc.forEach(s=>{if(s.userName===old)s.userName=nn;});Store.set('scores',sc);
+ if(firebaseReady)try{const q=await db.collection('scores').where('userName','==',old).get(),b=db.batch();q.docs.forEach(d=>b.update(d.ref,{userName:nn}));await b.commit();}catch(e){}
+ await Cloud.saveUser(u);Store.set('session',u);ts=0;closeModal('p4Modal');
+ renderUserChip();renderSidebarUser();renderProfile();showToast('تم تغيير الاسم','success');}
+function renameUI(){modal('تغيير الاسم',`<div class="form-group"><label>الاسم الجديد (ثلاثي)</label><input class="form-control" id="rnIn" value="${escapeHtml(AppState.user.name)}"></div><p class="form-hint">مسموح مرة كل 30 يوم، ولازم الاسم يكون غير مستخدم.</p><button class="btn btn-primary btn-block mt-2" id="rnGo">حفظ</button>`);$('#rnGo').onclick=()=>rename($('#rnIn').value);}
+function logoutUI(){if(confirm('تسجيل الخروج؟'))logout();}
+function deleteUI(){const u=AppState.user;
+ modal('حذف حسابي',`<p style="color:var(--danger);font-weight:700">تحذير: الحذف نهائي ومن غير رجعة. هتخسر كل XP والشارات والمشتريات ونتايجك في لوحة الشرف والدوري.</p><div class="form-group mt-2"><label>اسمك زي ما سجلته</label><input class="form-control" id="dlN"></div><div class="form-group"><label>شعبتك</label><select class="form-control" id="dlB"><option value="">اختر</option>${Object.entries(BR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="form-group"><label>الكود السري</label><input type="password" class="form-control" id="dlP" inputmode="numeric" maxlength="6"></div><button class="btn btn-danger btn-block" id="dlGo">حذف حسابي نهائياً</button>`);
+ $('#dlGo').onclick=async()=>{
+  if(norm($('#dlN').value)!==norm(u.name)||$('#dlB').value!==u.branch||$('#dlP').value!==u.pin)return showToast('البيانات غير مطابقة','error');
+  if(!confirm('آخر تأكيد: حذف الحساب نهائياً؟'))return;
+  if(firebaseReady)try{const q=await db.collection('scores').where('userName','==',u.name).get(),b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit();await db.collection('heartbeats').doc(u.id).delete();}catch(e){}
+  Store.set('scores',Store.get('scores',[]).filter(s=>s.userName!==u.name));
+  await Cloud.deleteUser(u.id);Store.remove('session');location.reload();};}
+$('#sidebarLeaderMsg').insertAdjacentHTML('afterend','<hr class="sidebar-divider"><a class="sidebar-link" id="sbName">تغيير الاسم</a><a class="sidebar-link" id="sbOut">تسجيل الخروج</a><a class="sidebar-link" id="sbInst">ثبّت التطبيق</a>');
+$('#sbName').onclick=()=>{closeSidebar();if(!isStu())return showToast('للطلاب المسجلين فقط','warning');renameUI();};
+$('#sbOut').onclick=()=>{closeSidebar();logoutUI();};
+
+/* زر التثبيت والأيقونة */
+let dp;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;});
+(()=>{const c=document.createElement('canvas');c.width=c.height=192;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,192,192);
+ g.addColorStop(0,'#2563EB');g.addColorStop(1,'#8B5CF6');x.fillStyle=g;x.fillRect(0,0,192,192);x.fillStyle='#fff';x.font='bold 64px sans-serif';x.textAlign='center';x.fillText('MCI',96,118);
+ const url=c.toDataURL('image/png');
+ document.head.insertAdjacentHTML('beforeend',`<link rel="icon" href="${url}"><link rel="apple-touch-icon" href="${url}"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="MCI Hub">`);
+ const m={name:'MCI Social Hub',short_name:'MCI Hub',start_url:location.href,display:'standalone',background_color:'#0F172A',theme_color:'#1E293B',icons:[{src:url,sizes:'192x192',type:'image/png'}]};
+ document.head.insertAdjacentHTML('beforeend',`<link rel="manifest" href="data:application/manifest+json,${encodeURIComponent(JSON.stringify(m))}">`);})();
+$('#sbInst').onclick=()=>{closeSidebar();if(dp){dp.prompt();dp=null;}else showToast('iPhone: زر المشاركة ثم "إضافة إلى الشاشة الرئيسية". Android: قائمة المتصفح ثم "تثبيت التطبيق".','info',9000);};
+
+/* المتجر الموسّع */
+const IT=[['f_gold','frame','gold','إطار ذهبي',100],['f_neon','frame','neon','إطار نيون',200],['f_royal','frame','royal','إطار ملكي',300],['f_fire','frame','fire','إطار ناري 🔥',250],['f_rain','frame','rainbow','إطار قوس قزح 🌈',350],['f_dia','frame','diamond','إطار الماس 💎',500],
+['t_prince','title','البرنس','البرنس',150],['t_eco','title','وحش الاقتصاد','وحش الاقتصاد',150],['t_mis','title','عراب النظم','عراب النظم',150],['t_acc','title','وحش المحاسبة','وحش المحاسبة',150],['t_mk','title','ملك التسويق','ملك التسويق',150],['t_night','title','دحيح الليل','دحيح الليل',120],['t_rock','title','الصاروخ 🚀','الصاروخ 🚀',200],['t_leg','title','الأسطورة','الأسطورة',400],
+['c_gold','ncol','#EAB308','اسم ذهبي',120],['c_blue','ncol','#22D3EE','اسم أزرق نيون',150],['c_grad','ncol','grad','اسم متدرّج',250],
+['i_1','icon','👑','أيقونة 👑',200],['i_2','icon','⭐','أيقونة ⭐',80],['i_3','icon','🔥','أيقونة 🔥',120],['i_4','icon','🦅','أيقونة 🦅',150],
+['b_sun','bg','linear-gradient(135deg,#f59e0b,#db2777)','خلفية غروب',150],['b_night','bg','linear-gradient(135deg,#0f172a,#4338ca)','خلفية ليلية',200],['b_green','bg','linear-gradient(135deg,#065f46,#10b981)','خلفية خضراء',150],['b_pur','bg','linear-gradient(135deg,#6d28d9,#ec4899)','خلفية بنفسجي',300],
+['x_fw','fx','🎆','احتفال ألعاب نارية',200],['x_ht','fx','💖','احتفال قلوب',150],['x_st','fx','✨','احتفال نجوم',150]];
+const TT={frame:'إطارات',title:'ألقاب',ncol:'ألوان الاسم',icon:'أيقونات',bg:'خلفيات البطاقة',fx:'تأثيرات الاحتفال'};
+function store(){const u=AppState.user;u.owned=u.owned||[];
+ let h=`<p class="mb-2">رصيدك: <strong>${u.xp||0} XP</strong>${(u.dxp||0)>Date.now()?' — ⚡ XP مضاعف شغال':''}</p>`;
+ Object.entries(TT).forEach(([ty,nm])=>{h+=`<h4 class="mt-2 mb-1">${nm}</h4>`+IT.filter(x=>x[1]===ty).map(([id,,v,lb,c])=>{const own=u.owned.includes(id),on=u[ty]===v;
+  return `<div class="qbank-item flex between center"><span>${lb} <span class="badge badge-warning">${c} XP</span></span><button class="btn btn-sm ${own?'btn-ghost':'btn-primary'}" data-id="${id}">${on?'مُفعّل ✅':own?'تفعيل':'شراء'}</button></div>`;}).join('');});
+ h+=`<h4 class="mt-2 mb-1">مفاجآت</h4><div class="qbank-item flex between center"><span>🎁 صندوق حظ <span class="badge badge-warning">50 XP</span></span><button class="btn btn-sm btn-primary" id="stLuck">افتح</button></div><div class="qbank-item flex between center"><span>⚡ XP مضاعف 24 ساعة <span class="badge badge-warning">300 XP</span></span><button class="btn btn-sm btn-primary" id="stDx">شراء</button></div>`;
+ modal('🛒 متجر النقاط',h);
+ $$('#p4Body [data-id]').forEach(b=>b.onclick=()=>{const [id,ty,v,lb,c]=IT.find(x=>x[0]===b.dataset.id);
+  if(!u.owned.includes(id)){if((u.xp||0)<c)return showToast('نقاطك مش كفاية','warning');u.xp-=c;u.owned.push(id);renderUserChip();}
+  u[ty]=v;usave();store();});
+ const pay=c=>{if((u.xp||0)<c){showToast('نقاطك مش كفاية','warning');return false;}u.xp-=c;return true;};
+ $('#stLuck').onclick=()=>{if(!pay(50))return;const r=[0,0,10,20,30,40,60,120][Math.floor(Math.random()*8)];u.xp+=r;usave();renderUserChip();showToast(r?`🎁 كسبت ${r} XP`:'🎁 الصندوق فاضي المرة دي','info');store();};
+ $('#stDx').onclick=()=>{if(!pay(300))return;u.dxp=Math.max(u.dxp||0,Date.now())+864e5;usave();renderUserChip();store();};}
+$('#sidebarStore').onclick=()=>{closeSidebar();if(!isStu())return showToast('المتجر للطلاب المسجلين فقط','warning');store();};
+const _ax=addXP;
+addXP=a=>{_ax(a);const u=AppState.user;if(!G.__d&&isStu()&&(u.dxp||0)>Date.now()){G.__d=1;_ax(a);G.__d=0;}};
+const _ser=showExamResult;
+showExamResult=async(r,a)=>{await _ser(r,a);const u=AppState.user;
+ if(isStu()&&r.pct>85&&u.fx)for(let i=0;i<40;i++){const e=document.createElement('i');e.className='cf';e.textContent=u.fx;
+  e.style.cssText=`left:${Math.random()*100}vw;width:auto;height:auto;font-size:22px;background:none;animation-delay:${Math.random()}s`;
+  document.body.appendChild(e);setTimeout(()=>e.remove(),5000);}};
+
+/* البروفايل */
+const _rp=renderProfile;
+renderProfile=async()=>{await _rp();const u=AppState.user;if(!u||u.role==='guest')return;
+ const n=$('#profileCard .profile-name');
+ if(n){if(u.ncol==='grad'){n.style.background='linear-gradient(90deg,#fde047,#f472b6,#60a5fa)';n.style.webkitBackgroundClip='text';n.style.color='transparent';}
+  else if(u.ncol)n.style.color=u.ncol;
+  if(u.icon)n.textContent=u.icon+' '+u.name;}
+ if(u.frame){$('.profile-avatar')?.classList.add('fr-'+u.frame);$('.idcard')?.classList.add('fr-'+u.frame);}
+ if(u.bg&&$('.idcard'))$('.idcard').style.background=u.bg;
+ let c=$('#acctCard');if(!c){c=document.createElement('div');c.id='acctCard';c.className='card mt-3';$('#profileStats').after(c);}
+ c.innerHTML='<h3 class="mb-2">حسابي</h3><div class="flex gap-1 wrap"><button class="btn btn-ghost btn-sm" id="acRn">تغيير الاسم</button><button class="btn btn-ghost btn-sm" id="acOut">تسجيل الخروج</button><button class="btn btn-danger btn-sm" id="acDel">حذف حسابي</button></div>';
+ $('#acRn').onclick=renameUI;$('#acOut').onclick=logoutUI;$('#acDel').onclick=deleteUI;};
+
+/* جولة للطلاب الجدد + تقرير أسبوعي */
+const TS=[['📚','المذاكرة','ملخصات وبطاقات استذكار لكل مادة، وكمّل من آخر نقطة.'],['📝','الامتحانات','اختبر نفسك بأنماط مختلفة وشوف ترتيبك بين الدفعة.'],['⚔️','التنافس','مبارزات ودوريات بين الشعب وتحدي البقاء.'],['🛒','المتجر','اجمع XP واشتري إطارات وألقاب لبطاقتك.']];
+function tour(){let i=0;const o=$('#tourOv'),f=()=>{
+ if(i>=TS.length){o.classList.add('hidden');AppState.user.tour=1;usave();return;}
+ $('#tourE').textContent=TS[i][0];$('#tourH').textContent=TS[i][1];$('#tourP').textContent=TS[i][2];
+ $('#tourNext').textContent=i===TS.length-1?'يلا نبدأ':'التالي';};
+ o.classList.remove('hidden');f();$('#tourNext').onclick=()=>{i++;f();};$('#tourSkip').onclick=()=>{i=TS.length;f();};}
+const _al=afterLogin;
+afterLogin=async()=>{await _al();const u=AppState.user;if(isStu()&&!u.tour&&(u.createdAt||0)>=TOUR_FROM)tour();};
+async function week(){const u=AppState.user;if(!isStu())return;
+ const k='wk_'+u.id,w=Math.floor(Date.now()/6048e5);if(Store.get(k,0)===w)return;Store.set(k,w);
+ const sc=(await Cloud.getScores()).filter(s=>s.userName===u.name&&Date.now()-new Date(s.date)<6048e5),by={};
+ sc.forEach(s=>(by[s.subjectId]=by[s.subjectId]||[]).push(s.pct));
+ const r=Object.entries(by).map(([id,a])=>[APP_DATA.subjects[id]?.name||id,Math.round(a.reduce((x,y)=>x+y,0)/a.length)]).sort((a,b)=>b[1]-a[1]);
+ let c=$('#weekCard');if(!c){c=document.createElement('div');c.id='weekCard';c.className='card mb-3';$('#readinessSection').before(c);}
+ c.innerHTML='<div class="flex between center"><strong>📊 تقريرك الأسبوعي</strong><button class="btn btn-ghost btn-xs" id="wkX">×</button></div>'+(sc.length
+  ?`<p class="text-sm mt-1">اختبارات الأسبوع: <strong>${sc.length}</strong> — المتوسط: <strong>${Math.round(sc.reduce((a,s)=>a+s.pct,0)/sc.length)}%</strong></p><p class="text-sm">💪 الأقوى: <strong>${r[0][0]}</strong> — 🎯 محتاج تركيز: <strong>${r[r.length-1][0]}</strong></p>`
+  :'<p class="text-sm text-muted mt-1">مفيش اختبارات الأسبوع ده. ابدأ واحد النهاردة!</p>');
+ $('#wkX').onclick=()=>c.remove();}
+const _nt=navigateTo;navigateTo=p=>{_nt(p);if(p==='home')week();};
+})();
+</script>
 
 
 
