@@ -3355,5 +3355,482 @@ function initModals() {
   });
 }
 </script>
+
+
+
+
+
+
+
+
+
+
+<style>
+.subject-card{--sc:#2563EB;border-top:4px solid var(--sc)}
+.subject-card[data-sid=accounting]{--sc:#10B981}.subject-card[data-sid=law]{--sc:#8B5CF6}
+.subject-card[data-sid=economics]{--sc:#F59E0B}.subject-card[data-sid=logistics]{--sc:#06B6D4}
+.subject-card[data-sid=marketing]{--sc:#EC4899}
+.subject-card .subject-icon{background:color-mix(in srgb,var(--sc) 18%,transparent);color:var(--sc)}
+@media(hover:hover){.subject-card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 12px 28px color-mix(in srgb,var(--sc) 35%,transparent)}}
+.cf{position:fixed;top:-20px;width:9px;height:14px;z-index:400;pointer-events:none;animation:cf 3s linear forwards}
+@keyframes cf{to{transform:translateY(110vh) rotate(720deg)}}
+#toTop{position:fixed;bottom:70px;left:16px;z-index:150;display:none;background:var(--primary);color:#fff}
+.idcard{background:var(--grad-hero);color:#fff;border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow-md)}
+.idcard h3{font-size:1.2rem}.idcard .rk{display:inline-block;background:rgba(0,0,0,.25);padding:4px 14px;border-radius:99px;margin:8px 0}
+.bulk-help{background:var(--bg-soft);padding:10px;border-radius:8px;font-size:.78rem;white-space:pre-wrap;margin-bottom:8px}
+</style>
+<script>
+(()=>{
+const G=window,norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+const DIFF={easy:'سهل',mid:'متوسط',hard:'للمتفوقين'},QT={mcq:'اختيار',tf:'صح وخطأ',essay:'مقالي'};
+const diffKey=t=>/سهل/.test(t)?'easy':/متوسط/.test(t)?'mid':/(متفوق|صعب)/.test(t)?'hard':'';
+const cp=q=>{navigator.clipboard?.writeText(location.origin+location.pathname+q).then(()=>showToast('تم نسخ الرابط','success'))};
+const lvKey=()=>'lastView_'+(AppState.user?.id||'g'),lv=v=>Store.set(lvKey(),v);
+const BULK_HELP=`صيغة الرفع بالجملة (افصل بين الأسئلة بسطر ---)
+[اختيار من متعدد]
+نص السؤال
+أ) ... ب) ... ج) ... د) ...
+الإجابة: أ
+الشرح: ...  |  الفصل: 1  |  الصعوبة: سهل/متوسط/متفوقين
+---
+[صح وغلط]
+نص السؤال
+النوع: صح وغلط
+الإجابة: صح   (أو خطأ)
+---
+[مقالي]
+نص السؤال
+النوع: مقالي
+الإجابة: الإجابة النموذجية`;
+
+/* الأسئلة: المقالي مخفي عن الامتحانات، وفلترة الفصل/الصعوبة */
+const _gq=Cloud.getQuestions;
+Cloud.getQuestions=async sid=>{let a=(await _gq(sid)).filter(q=>q.type!=='essay');const f=G.__qf;
+ if(f){if(f.ch)a=a.filter(q=>(q.chapter||'')==f.ch);if(f.df)a=a.filter(q=>q.difficulty==f.df);}return a;};
+const _se=startExam;
+startExam=async(sid,m,o)=>{try{await _se(sid,m,o);}finally{G.__qf=null;}lv({type:'exam',sid});};
+
+/* المسؤول */
+parseBulkText=text=>text.split(/\n\s*-{3,}\s*(?:\n|$)/).map(b=>b.trim()).filter(Boolean).map(b=>{
+ const L=b.split('\n').map(l=>l.trim()).filter(Boolean);
+ const q={id:uid(),question:L[0],options:[],correct:-1,explanation:'',type:'mcq',chapter:'',difficulty:'mid'};let ans='',tp='';
+ L.slice(1).forEach(l=>{const m=l.match(/^(النوع|الإجابة|الاجابة|الشرح|الفصل|الصعوبة)\s*[:：]\s*(.*)$/);
+  if(m){const k=m[1].replace('الاجابة','الإجابة'),v=m[2].trim();
+   if(k==='النوع')tp=v;else if(k==='الإجابة')ans=v;else if(k==='الشرح')q.explanation=v;else if(k==='الفصل')q.chapter=v;else q.difficulty=diffKey(v)||'mid';}
+  else if(/^[أبجد]\s*[\)\.\-]/.test(l))q.options.push(l.replace(/^[أبجد]\s*[\)\.\-]\s*/,'').trim());});
+ q.is_trick=/(تركة|استثناء|انتبه|خطأ شائع)/.test(q.question);
+ if(/مقال/.test(tp)){q.type='essay';q.modelAnswer=ans;return ans?q:null;}
+ if(/صح/.test(tp)||(!q.options.length&&/^(صح|خطأ|خطا)$/.test(ans))){q.type='tf';q.options=['صح','خطأ'];q.correct=/^صح/.test(ans)?0:1;return q;}
+ q.correct=ans?'أبجد'.indexOf(ans.charAt(0)):-1;
+ return q.options.length>=2&&q.correct>=0&&q.correct<q.options.length?q:null;}).filter(Boolean);
+
+async function addQs(sid,arr){
+ const ex=await _gq(sid),seen=new Set(ex.map(q=>norm(q.question))),ok=[],dup=[];
+ arr.forEach(q=>{const k=norm(q.question);if(seen.has(k))dup.push(q);else{seen.add(k);ok.push(q);}});
+ if(dup.length)showToast(`تم منع ${dup.length} سؤال مكرر: «${dup[0].question.slice(0,40)}»`,'error',6000);
+ if(!ok.length)return false;
+ await Cloud.saveQuestions(sid,ex.concat(ok));
+ showToast(`تمت إضافة ${ok.length} سؤال`,'success');renderSubjects();renderQbank();
+ await notifyAllStudents('رفع الليدر صلاح أشرف أسئلة جديدة لمادة '+APP_DATA.subjects[sid].name+' دلوقتي!');
+ return true;}
+
+const _ia=initAdminDashboard;
+initAdminDashboard=()=>{_ia();patchAdmin();};
+function patchAdmin(){
+ if(!$('#singleDiff')){
+  $('#singleType').insertAdjacentHTML('beforeend','<option value="essay">مقالي (Essay)</option>');
+  $('#singleExplain').parentElement.insertAdjacentHTML('afterend','<div class="form-row"><div class="form-group"><label>الفصل / الوحدة</label><input class="form-control" id="singleChapter"></div><div class="form-group"><label>الصعوبة</label><select class="form-control" id="singleDiff"><option value="easy">سهل</option><option value="mid" selected>متوسط</option><option value="hard">للمتفوقين</option></select></div></div><div class="form-group"><label>الإجابة النموذجية (للمقالي فقط)</label><input class="form-control" id="singleModel"></div>');
+  $('#bulkText').insertAdjacentHTML('beforebegin','<div class="bulk-help">'+escapeHtml(BULK_HELP)+'</div>');
+ }
+ $('#singleSubmitBtn').onclick=async()=>{
+  const sid=$('#singleSubject').value,type=$('#singleType').value,question=$('#singleQuestion').value.trim();
+  let options=[],correct=parseInt($('#singleCorrect').value);
+  if(type==='tf')options=['صح','خطأ'];
+  else if(type==='mcq')options=['A','B','C','D'].map(x=>$('#singleOpt'+x).value.trim()).filter(Boolean);
+  else correct=-1;
+  const model=$('#singleModel').value.trim();
+  if(!question||(type==='mcq'&&(options.length<2||correct>=options.length))||(type==='essay'&&!model))return showToast('أكمل البيانات','warning');
+  const q={id:uid(),question,options,correct,explanation:$('#singleExplain').value.trim(),type,is_trick:$('#singleTrick').value==='true',chapter:$('#singleChapter').value.trim(),difficulty:$('#singleDiff').value};
+  if(type==='essay')q.modelAnswer=model;
+  if(await addQs(sid,[q]))['singleQuestion','singleOptA','singleOptB','singleOptC','singleOptD','singleExplain','singleModel'].forEach(i=>$('#'+i).value='');
+ };
+ $('#bulkSubmitBtn').onclick=async()=>{
+  const p=parseBulkText($('#bulkText').value);if(!p.length)return showToast('لا توجد أسئلة صالحة','warning');
+  if(await addQs($('#bulkSubject').value,p)){$('#bulkText').value='';$('#bulkPreview').innerHTML='';}};
+ renderQbank();
+}
+
+renderQbank=async()=>{
+ const sid=$('#bankSubjectFilter').value;if(!sid)return;const qs=await _gq(sid),box=$('#qbankList');
+ if(!qs.length){box.innerHTML='<p class="text-muted">لا توجد أسئلة بعد</p>';return;}
+ const chs=[...new Set(qs.map(q=>q.chapter).filter(Boolean))];
+ box.innerHTML=`<div class="flex gap-1 wrap mb-2 center"><label class="text-sm"><input type="checkbox" id="qbAll"> تحديد الكل</label><select class="form-control" id="qbCh" style="width:auto"><option value="">تحديد حسب الفصل</option>${chs.map(c=>`<option>${escapeHtml(c)}</option>`).join('')}</select><button class="btn btn-danger btn-sm" id="qbDel">حذف المحدد</button></div>`+
+ qs.map((q,i)=>`<div class="qbank-item"><label class="qb-q"><input type="checkbox" class="qbChk" data-id="${q.id}" data-ch="${escapeHtml(q.chapter||'')}"> ${i+1}. ${escapeHtml(q.question)}</label><div class="qb-meta"><span class="badge badge-primary">${QT[q.type||'mcq']||'اختيار'}</span>${q.chapter?`<span class="badge badge-warning">${escapeHtml(q.chapter)}</span>`:''}${DIFF[q.difficulty]?`<span class="badge badge-success">${DIFF[q.difficulty]}</span>`:''}${q.is_trick?'<span class="badge badge-danger">تريكة</span>':''}</div></div>`).join('');
+ $('#qbAll').onchange=e=>$$('.qbChk').forEach(c=>c.checked=e.target.checked);
+ $('#qbCh').onchange=e=>{if(e.target.value)$$('.qbChk').forEach(c=>c.checked=c.dataset.ch===e.target.value);};
+ $('#qbDel').onclick=async()=>{const ids=$$('.qbChk:checked').map(c=>c.dataset.id);
+  if(!ids.length)return showToast('حدد أسئلة أولاً','warning');if(!confirm(`حذف ${ids.length} سؤال نهائياً؟`))return;
+  const cur=await _gq(sid);await Cloud.saveQuestions(sid,cur.filter(q=>!ids.includes(q.id)));renderQbank();renderSubjects();showToast('تم الحذف','success');};
+};
+
+renderAdminStats=async()=>{
+ const users=await Cloud.getUsers(),scores=await Cloud.getScores();
+ const cnt=(a,f)=>Object.entries(a.reduce((m,x)=>(m[f(x)]=(m[f(x)]||0)+1,m),{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const act=cnt(scores,s=>s.userName),subs=cnt(scores,s=>s.subjectId);
+ const wr={};users.forEach(u=>(u.wrongQuestions||[]).forEach(w=>{const k=w.subjectId+'|'+w.questionId;wr[k]=(wr[k]||0)+1;}));
+ const rows=[];for(const [k,n] of Object.entries(wr).sort((a,b)=>b[1]-a[1]).slice(0,5)){const [sid,qid]=k.split('|');const q=(await _gq(sid)).find(x=>x.id===qid);if(q)rows.push(`<li>${escapeHtml(q.question)} <span class="badge badge-danger">${n} طالب</span></li>`);}
+ const li=(a,f)=>a.length?'<ul>'+a.map(x=>`<li>${f(x)} <span class="badge badge-primary">${x[1]}</span></li>`).join('')+'</ul>':'<p class="text-muted text-sm">لا بيانات</p>';
+ $('#adminStatsContent').innerHTML=`<div class="grid grid-3"><div class="card"><h3>المسجلين</h3><p style="font-size:1.8rem;font-weight:700;color:var(--primary)">${users.length}</p></div><div class="card"><h3>الامتحانات</h3><p style="font-size:1.8rem;font-weight:700;color:var(--primary)">${scores.length}</p></div></div>
+ <div class="grid grid-3 mt-2"><div class="card"><h3>أنشط الطلاب</h3>${li(act,x=>escapeHtml(x[0]))}</div><div class="card"><h3>أكثر المواد إقبالاً</h3>${li(subs,x=>APP_DATA.subjects[x[0]]?.name||x[0])}</div><div class="card"><h3>أكثر الأسئلة خطأً</h3>${rows.length?'<ul>'+rows.join('')+'</ul>':'<p class="text-muted text-sm">لا بيانات</p>'}</div></div>
+ <h4 class="mt-3 mb-2">الطلاب</h4><div class="form-row mb-2"><input class="form-control" id="stSearch" placeholder="ابحث باسم الطالب..."><select class="form-control" id="stBranch"><option value="">الكل</option><option value="Marketing">تسويق فقط</option><option value="MIS">نظم معلومات فقط</option><option value="Accounting">محاسبة فقط</option></select></div><div id="stList"></div>`;
+ const draw=()=>{const t=norm($('#stSearch').value),b=$('#stBranch').value;
+  $('#stList').innerHTML=users.filter(u=>(!b||u.branch===b)&&norm(u.name).includes(t)).map(u=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(u.name)}</div><div class="qb-meta"><span class="badge badge-primary">${APP_DATA.branches[u.branch]?.name||u.branch}</span><span class="badge badge-success">${u.xp||0} XP</span></div><div class="qb-actions"><button class="btn btn-danger btn-xs" onclick="deleteUserAdmin('${u.id}')">حذف</button></div></div>`).join('')||'<p class="text-muted">لا نتائج</p>';};
+ $('#stSearch').oninput=draw;$('#stBranch').onchange=draw;draw();
+};
+
+/* الطالب */
+function renderContinue(){
+ let c=$('#continueCard');if(!c){c=document.createElement('div');c.id='continueCard';$('#motivationCard').before(c);}
+ const v=Store.get(lvKey(),null);if(!v||!APP_DATA.subjects[v.sid]){c.innerHTML='';return;}
+ c.innerHTML=`<div class="card mb-3" style="border-right:5px solid var(--primary)"><div class="flex between center wrap gap-2"><div><strong>أكمل مذاكرتك</strong><p class="text-sm text-muted">${v.type==='exam'?'آخر اختبار':'آخر ملخص'}: ${APP_DATA.subjects[v.sid].name}</p></div><button class="btn btn-primary btn-sm" id="contBtn">متابعة</button></div></div>`;
+ $('#contBtn').onclick=()=>v.type==='exam'?openExamSetup(v.sid):openSubjectPage(v.sid);}
+const _nt=navigateTo;navigateTo=p=>{_nt(p);if(p==='home')renderContinue();};
+
+const _os=openSubjectPage;
+openSubjectPage=async(sid,noteIdx)=>{await _os(sid);lv({type:'note',sid});decorate(sid,noteIdx);};
+function decorate(sid,open){
+ if(!$('#copySubjLink'))$('#backFromSubject').insertAdjacentHTML('afterend',' <button class="btn btn-ghost btn-sm mb-1" id="copySubjLink">نسخ رابط المادة</button>');
+ $('#copySubjLink').onclick=()=>cp('?subject='+sid);
+ if(!$('#noteFilter'))$('#detailTabs').insertAdjacentHTML('afterend','<input class="form-control mb-2" id="noteFilter" placeholder="فلترة الملخصات بالفصل / العنوان...">');
+ $('#noteFilter').value='';
+ $('#noteFilter').oninput=e=>$$('#detailNotesPanel .accordion-item').forEach(it=>it.style.display=norm(it.textContent).includes(norm(e.target.value))?'':'none');
+ $$('#detailNotesPanel .accordion-item').forEach((it,i)=>{
+  const key=sid+'_'+i,b=document.createElement('button');
+  b.className='btn btn-ghost btn-xs';b.textContent='رابط مباشر';b.onclick=e=>{e.stopPropagation();cp('?subject='+sid+'&note='+i);};
+  it.querySelector('.accordion-header').insertBefore(b,it.querySelector('.chevron'));
+  if(AppState.user?.role==='student'){
+   const ta=document.createElement('textarea');ta.className='form-control mt-2';ta.style.fontFamily='inherit';ta.placeholder='ملاحظاتي الشخصية على هذا الملخص...';
+   ta.value=(AppState.user.notes||{})[key]||'';let t;
+   ta.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{AppState.user.notes={...(AppState.user.notes||{}),[key]:ta.value};Store.set('session',AppState.user);Cloud.saveUser(AppState.user);},800);};
+   it.querySelector('.accordion-body').appendChild(ta);}
+ });
+ if(open!=null)$$('#detailNotesPanel .accordion-item')[open]?.classList.add('open');}
+
+const _oes=openExamSetup;
+openExamSetup=async sid=>{
+ await _oes(sid);const body=$('#examSetupBody'),qs=await Cloud.getQuestions(sid);if(!body||!qs.length)return;
+ const chs=[...new Set(qs.map(q=>q.chapter).filter(Boolean))];
+ body.insertAdjacentHTML('beforeend',`<hr class="sidebar-divider"><h4 class="mb-1">اختبار مخصص بالفلترة</h4><select class="form-control mb-1" id="fxCh"><option value="">كل الفصول</option>${chs.map(c=>`<option>${escapeHtml(c)}</option>`).join('')}</select><select class="form-control mb-1" id="fxDf"><option value="">كل المستويات</option><option value="easy">سهل</option><option value="mid">متوسط</option><option value="hard">للمتفوقين</option></select><button class="btn btn-secondary btn-block" id="fxGo">ابدأ بالفلتر</button>`);
+ $('#fxGo').onclick=()=>{G.__qf={ch:$('#fxCh').value,df:$('#fxDf').value};startExam(sid,'custom',{count:50,type:'mixed'});};};
+
+function confetti(){const c=['#2563EB','#F59E0B','#10B981','#EC4899','#8B5CF6','#EAB308'];
+ for(let i=0;i<90;i++){const d=document.createElement('i');d.className='cf';
+  d.style.cssText=`left:${Math.random()*100}vw;background:${c[i%6]};animation-delay:${Math.random()*1.2}s;animation-duration:${2.5+Math.random()*2}s`;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),5000);}}
+const _ser=showExamResult;
+showExamResult=async(r,a)=>{_ser(r,a);
+ const u=AppState.user;if(!u||u.role!=='student')return;
+ const all=(await Cloud.getScores()).filter(s=>s.subjectId===r.subjectId),others=all.length-1;
+ const el=$('#examResultBody p.text-center'),st=$('#examResultBody .result-stat:nth-child(3) .rs-num');
+ if(others>0){const p=Math.round(all.filter(s=>s.pct<r.pct).length/others*100);
+  if(st)st.textContent=p+'%';if(el)el.textContent=`درجتك أعلى من ${p}% من الطلاب الذين خاضوا هذا الاختبار`;}
+ else{if(st)st.textContent='—';if(el)el.textContent='أنت أول من يخوض هذا الاختبار!';}
+ if(r.pct>85){confetti();showToast(`مبروك يا ${u.name.split(/\s+/)[0]}! أداء رائع ${r.pct}%`,'success',6000);}};
+
+const _rp=renderProfile;
+renderProfile=async()=>{await _rp();const u=AppState.user;if(!u||u.role==='guest')return;
+ const n=(await Cloud.getScores()).filter(s=>s.userName===u.name).length;
+ const rank=n>=25?'أسطورة المنصة':n>=10?'متفوق':n>=3?'مجتهد':'مبتدئ طموح';
+ let c=$('#idCard');if(!c){c=document.createElement('div');c.id='idCard';c.className='mt-3';$('#profileCard').after(c);}
+ c.innerHTML=`<div class="idcard"><div style="opacity:.85;font-size:.8rem">MCI Social Hub — بطاقة طالب</div><h3 class="mt-1">${escapeHtml(u.name)}</h3><div>${APP_DATA.branches[u.branch]?.name||''}</div><div class="rk">${rank}</div><div class="text-sm">${n} اختبار — ${u.xp||0} XP</div></div>`;};
+
+document.body.insertAdjacentHTML('beforeend','<button class="icon-btn" id="toTop" title="للأعلى">↑</button>');
+const tt=$('#toTop');
+tt.onclick=()=>{scrollTo({top:0,behavior:'smooth'});$$('.modal-backdrop.active .modal').forEach(m=>m.scrollTo({top:0,behavior:'smooth'}));};
+addEventListener('scroll',()=>{tt.style.display=(scrollY>400||$$('.modal-backdrop.active .modal').some(m=>m.scrollTop>400))?'block':'none';},true);
+
+setTimeout(()=>{const p=new URLSearchParams(location.search),s=p.get('subject');
+ if(s&&AppState.user&&APP_DATA.subjects[s])openSubjectPage(s,p.get('note')!=null?+p.get('note'):null);},1500);
+})();
+</script>
+
+الباتش التالت
+<style>
+.ov{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+#forceOverlay{background:rgba(15,23,42,.85)}
+#wm{position:fixed;inset:-20%;z-index:450;pointer-events:none;display:flex;flex-wrap:wrap;gap:60px 40px;overflow:hidden;opacity:.07;transform:rotate(-25deg);font-size:.8rem;font-weight:700;color:var(--text)}
+#detailNotesPanel,#detailFlashcardsPanel,#examRunnerBody,#examResultBody,#nightBeforeBody{-webkit-user-select:none;user-select:none}
+#detailNotesPanel textarea{-webkit-user-select:text;user-select:text}
+</style>
+<script>
+(()=>{
+const G=window;
+document.body.insertAdjacentHTML('beforeend',`
+<div class="ov hidden" id="mtOverlay" style="z-index:95"><div><h2>🛠️ الموقع تحت الصيانة</h2><p class="text-muted">جاري تنفيذ تحديثات.. هنرجع قريب جداً</p><button class="btn btn-ghost btn-sm mt-2" id="mtAdminBtn">دخول الإدارة</button></div></div>
+<div class="ov hidden" id="banOverlay" style="z-index:460"><div><h2>⛔ تم إيقاف حسابك</h2><p class="text-muted">تواصل مع ليدر الدفعة</p><button class="btn btn-ghost btn-sm mt-2" id="banOut">خروج</button></div></div>
+<div class="ov hidden" id="forceOverlay" style="z-index:470"><div class="card" style="max-width:480px"><h3>📢 تعليمات مهمة</h3><p id="forceTxt" class="mt-1" style="white-space:pre-wrap"></p><button class="btn btn-primary btn-block mt-2" id="forceOk">قرأت وفهمت التعليمات ✅</button></div></div>
+<div id="wm" class="hidden"></div>`);
+$('#mtAdminBtn').onclick=()=>openModal('adminLoginModal');
+$('#banOut').onclick=()=>logout();
+$('#forceOk').onclick=()=>{Store.set('ack_'+(AppState.user?.id||'g'),G.__f.id);$('#forceOverlay').classList.add('hidden');};
+
+/* حماية: منع النسخ + علامة مائية */
+['copy','cut','contextmenu','dragstart'].forEach(e=>document.addEventListener(e,ev=>{
+ if(G.__admin)return;const t=ev.target;
+ if(t.closest&&t.closest('#detailNotesPanel,#detailFlashcardsPanel,#examRunnerBody,#examResultBody,#nightBeforeBody')&&!t.closest('textarea,input'))ev.preventDefault();}));
+function wm(){const w=$('#wm'),u=AppState.user;
+ if(!u||u.role!=='student'||G.__admin){w.classList.add('hidden');return;}
+ const t=escapeHtml(u.name+' • '+u.id);w.innerHTML=Array(70).fill('<span>'+t+'</span>').join('');w.classList.remove('hidden');}
+
+/* صيانة + حظر + رسالة إجبارية */
+async function isBanned(id){
+ if(firebaseReady){try{return !!(await db.collection('users').doc(id).get()).data()?.banned;}catch(e){}}
+ return !!Store.get('users',[]).find(x=>x.id===id)?.banned;}
+async function tick(){
+ const u=AppState.user;wm();
+ $('#mtOverlay').classList.toggle('hidden',!(await Cloud.getConfig('maintenance',false))||!!G.__admin);
+ if(u&&u.role==='student')$('#banOverlay').classList.toggle('hidden',!(await isBanned(u.id)));
+ const f=await Cloud.getConfig('forceMsg',null);
+ if(f&&f.text&&!G.__admin&&Store.get('ack_'+(u?.id||'g'),'')!==f.id){G.__f=f;$('#forceTxt').textContent=f.text;$('#forceOverlay').classList.remove('hidden');}
+ else if(!f||!f.text)$('#forceOverlay').classList.add('hidden');}
+const _al=afterLogin;afterLogin=async()=>{await _al();tick();};
+setTimeout(tick,1200);setInterval(tick,45000);
+
+/* سلة المهملات */
+const addTrash=async items=>{if(!items.length)return;const t=await Cloud.getConfig('trash',[]);await Cloud.saveConfig('trash',t.concat(items).slice(-300));};
+const _sq=Cloud.saveQuestions;
+Cloud.saveQuestions=async(sid,arr)=>{const old=Store.get('questions_'+sid,[]);
+ await addTrash(old.filter(q=>!arr.some(x=>x.id===q.id)).map(q=>({tid:uid(),kind:'q',sid,item:q,at:Date.now()})));return _sq(sid,arr);};
+const _du=Cloud.deleteUser;
+Cloud.deleteUser=async id=>{const u=Store.get('users',[]).find(x=>x.id===id);if(u)await addTrash([{tid:uid(),kind:'u',item:u,at:Date.now()}]);return _du(id);};
+async function renderTrash(){
+ const t=await Cloud.getConfig('trash',[]);
+ $('#trashList').innerHTML=t.length?t.slice().reverse().map(x=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(x.kind==='q'?x.item.question:x.item.name)}</div><div class="qb-meta"><span class="badge badge-warning">${x.kind==='q'?'سؤال':'طالب'}</span><span class="text-xs">${new Date(x.at).toLocaleString('ar-EG')}</span></div><div class="qb-actions"><button class="btn btn-success btn-xs" data-r="${x.tid}">استعادة</button><button class="btn btn-danger btn-xs" data-d="${x.tid}">حذف نهائي</button></div></div>`).join(''):'<p class="text-muted">السلة فاضية</p>';
+ $$('#trashList [data-r]').forEach(b=>b.onclick=async()=>{
+  const t=await Cloud.getConfig('trash',[]),x=t.find(y=>y.tid===b.dataset.r);if(!x)return;
+  if(x.kind==='q')await _sq(x.sid,Store.get('questions_'+x.sid,[]).concat(x.item));else await Cloud.saveUser(x.item);
+  await Cloud.saveConfig('trash',t.filter(y=>y!==x));showToast('تمت الاستعادة','success');renderTrash();renderSubjects();});
+ $$('#trashList [data-d]').forEach(b=>b.onclick=async()=>{
+  if(!confirm('حذف نهائي؟'))return;const t=await Cloud.getConfig('trash',[]);
+  await Cloud.saveConfig('trash',t.filter(y=>y.tid!==b.dataset.d));renderTrash();});}
+
+/* لوحة الإدارة */
+const _ia2=initAdminDashboard;
+initAdminDashboard=()=>{_ia2();G.__admin=true;tick();patchAdmin2();};
+async function patchAdmin2(){
+ if(!$('#mtSwitch')){
+  $('#adminPanelSite').insertAdjacentHTML('beforeend',`<div style="height:1px;background:var(--border);margin:20px 0"></div><div class="admin-section-title">وضع الصيانة</div><label class="flex center gap-1"><input type="checkbox" id="mtSwitch"> تفعيل وضع الصيانة للطلاب (الإدارة تتصفح عادي)</label><div style="height:1px;background:var(--border);margin:20px 0"></div><div class="admin-section-title">رسالة إجبارية منبثقة</div><textarea class="form-control" id="forceText" rows="3" placeholder="نص الإعلان العاجل..."></textarea><div class="flex gap-1 mt-1"><button class="btn btn-primary" id="forceBtn">نشر للجميع</button><button class="btn btn-ghost" id="forceClear">إلغاء الرسالة</button></div>`);
+  $('.admin-tabs').insertAdjacentHTML('beforeend','<div class="admin-tab" id="trashTab" data-atab="trash">سلة المهملات</div>');
+  $('#adminPanelReports').insertAdjacentHTML('afterend','<div class="admin-panel" id="adminPanelTrash"><div class="admin-section-title">سلة المهملات</div><div id="trashList"></div></div>');
+  $('#mtSwitch').onchange=async e=>{await Cloud.saveConfig('maintenance',e.target.checked);showToast(e.target.checked?'تم تفعيل الصيانة':'تم إيقاف الصيانة','success');};
+  $('#forceBtn').onclick=async()=>{const t=$('#forceText').value.trim();if(!t)return showToast('اكتب الرسالة','warning');await Cloud.saveConfig('forceMsg',{id:uid(),text:t});showToast('تم النشر','success');};
+  $('#forceClear').onclick=async()=>{await Cloud.saveConfig('forceMsg',null);$('#forceText').value='';showToast('تم الإلغاء','success');};
+ }
+ $('#trashTab').onclick=()=>{$$('.admin-tab').forEach(x=>x.classList.remove('active'));$('#trashTab').classList.add('active');
+  $$('.admin-panel').forEach(p=>p.classList.remove('active'));$('#adminPanelTrash').classList.add('active');renderTrash();};
+ $('#mtSwitch').checked=!!(await Cloud.getConfig('maintenance',false));
+}
+
+/* حظر الطلاب + خريطة الذروة */
+function enhance(){const us=Store.get('users',[]);
+ $$('#stList .qbank-item').forEach(it=>{
+  const d=it.querySelector('.btn-danger');if(!d||it.querySelector('.banBtn'))return;
+  const id=((d.getAttribute('onclick')||'').match(/'([^']+)'/)||[])[1],u=us.find(x=>x.id===id);if(!u)return;
+  d.insertAdjacentHTML('beforebegin',`<button class="btn btn-secondary btn-xs banBtn">${u.banned?'فك الحظر':'تجميد / حظر'}</button> `);
+  it.querySelector('.banBtn').onclick=async()=>{u.banned=!u.banned;await Cloud.saveUser(u);showToast(u.banned?'تم تجميد الحساب':'تم فك الحظر','success');renderAdminStats();};});}
+new MutationObserver(enhance).observe($('#adminStatsContent'),{childList:true,subtree:true});
+const _ras=renderAdminStats;
+renderAdminStats=async()=>{await _ras();
+ const sc=await Cloud.getScores(),h=Array(24).fill(0);
+ sc.forEach(s=>{const d=new Date(s.date||s.createdAt);if(!isNaN(d))h[d.getHours()]++;});const m=Math.max(...h,1);
+ $('#adminStatsContent').insertAdjacentHTML('beforeend',`<h4 class="mt-3 mb-2">🔥 أوقات الذروة (حسب ساعة الامتحان)</h4><div class="card"><div style="display:flex;align-items:flex-end;gap:3px;height:110px">${h.map((v,i)=>`<div title="${i}:00 — ${v} امتحان" style="flex:1;height:${Math.max(4,v/m*100)}%;background:var(--primary);opacity:${.25+.75*v/m};border-radius:3px"></div>`).join('')}</div><div class="flex between text-xs text-muted mt-1"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div></div>`);};
+
+/* الدوري + المهمات اليومية */
+async function league(){
+ const us=await Cloud.getUsers(),s=b=>us.filter(u=>u.branch===b).reduce((a,u)=>a+(u.xp||0),0),m=s('Marketing'),n=s('MIS'),t=m+n||1;
+ let c=$('#leagueCard');if(!c){c=document.createElement('div');c.id='leagueCard';c.className='card mb-3';$('#readinessSection').before(c);}
+ c.innerHTML=`<strong>⚔️ الدوري: تسويق ضد نظم معلومات</strong><div class="flex between text-sm mt-1"><span>تسويق ${m} XP</span><span>نظم ${n} XP</span></div><div style="display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--bg-soft)"><div style="width:${m/t*100}%;background:var(--grad-secondary);transition:width .8s"></div><div style="width:${n/t*100}%;background:var(--grad-primary);transition:width .8s"></div></div><p class="text-sm text-center mt-1">${m===n?'تعادل!':m>n?'المتصدر: التسويق 🏆':'المتصدر: نظم المعلومات 🏆'}</p>`;}
+const QD=[['exam','أتمم اختباراً واحداً',1],['note','تصفح ملخصاً',1],['xp','اكسب 30 XP',30]];
+const qk=()=>'quests_'+(AppState.user?.id||'g'),day=()=>new Date().toISOString().slice(0,10);
+function qget(){let q=Store.get(qk(),null);if(!q||q.day!==day())q={day:day(),p:{exam:0,note:0,xp:0},claimed:false};return q;}
+function qinc(k,n=1){if(AppState.user?.role!=='student')return;const q=qget();q.p[k]=(q.p[k]||0)+n;Store.set(qk(),q);quests();}
+function quests(){
+ if(AppState.user?.role!=='student')return;
+ let c=$('#questCard');if(!c){c=document.createElement('div');c.id='questCard';c.className='card mb-3';$('#readinessSection').before(c);}
+ const q=qget(),all=QD.every(([k,,g])=>q.p[k]>=g);
+ if(all&&!q.claimed){q.claimed=true;Store.set(qk(),q);setTimeout(()=>{addXP(30);showToast('أنجزت المهمات اليومية! +30 XP','success');},0);}
+ c.innerHTML='<strong>🎯 مهمات اليوم (بتتجدد كل يوم)</strong>'+QD.map(([k,t,g])=>{const v=Math.min(q.p[k]||0,g);
+  return `<div class="mt-1 text-sm">${t} <span class="text-muted">(${v}/${g})</span><div style="height:8px;background:var(--bg-soft);border-radius:9px;overflow:hidden"><div style="height:100%;width:${v/g*100}%;background:var(--success)"></div></div></div>`;}).join('')+`<p class="text-xs text-muted mt-1">${q.claimed?'تم استلام المكافأة ✅':'أكمل المهمات الثلاث واستلم +30 XP'}</p>`;}
+const _ax=addXP;addXP=a=>{_ax(a);qinc('xp',a);};
+const _ss=Cloud.saveScore;Cloud.saveScore=async s=>{await _ss(s);qinc('exam');};
+const _os2=openSubjectPage;openSubjectPage=async(...a)=>{await _os2(...a);qinc('note');};
+const _nt2=navigateTo;navigateTo=p=>{_nt2(p);if(p==='home'){league();quests();}};
+
+/* رادار الأداء */
+const _rp2=renderProfile;
+renderProfile=async()=>{await _rp2();const u=AppState.user;if(!u||u.role==='guest')return;
+ const sc=(await Cloud.getScores()).filter(s=>s.userName===u.name);
+ const rows=Object.entries(APP_DATA.subjects).map(([id,s])=>{const a=sc.filter(x=>x.subjectId===id);return{n:s.name,c:a.length,v:a.length?Math.round(a.reduce((x,y)=>x+y.pct,0)/a.length):null};});
+ const d=rows.filter(r=>r.v!==null).sort((a,b)=>b.v-a.v);
+ let c=$('#radarCard');if(!c){c=document.createElement('div');c.id='radarCard';c.className='card mt-3';($('#idCard')||$('#profileCard')).after(c);}
+ c.innerHTML='<h3 class="mb-2">📡 رادار الأداء</h3>'+rows.map(r=>`<div class="text-sm mt-1">${r.n} <span class="text-muted">${r.v===null?'لم تختبر بعد':r.v+'% ('+r.c+' اختبار)'}</span><div style="height:10px;background:var(--bg-soft);border-radius:9px;overflow:hidden"><div style="height:100%;width:${r.v||0}%;background:${r.v>=75?'var(--success)':r.v>=50?'var(--warning)':'var(--danger)'}"></div></div></div>`).join('')+(d.length?`<p class="text-sm mt-2">💪 نقطة قوتك: <strong>${d[0].n}</strong> — 🎯 تحتاج تركيز: <strong>${d[d.length-1].n}</strong></p>`:'');};
+})();
+</script> 
+
+الباتش التالت
+
+<style>
+.hasLeagues #leagueCard{display:none}
+.fr-gold{box-shadow:0 0 0 4px #EAB308,0 0 18px #EAB308!important}
+.fr-neon{box-shadow:0 0 0 3px #22D3EE,0 0 22px #22D3EE,0 0 40px #8B5CF6!important}
+.fr-royal{box-shadow:0 0 0 4px #8B5CF6,0 0 0 8px #EAB308!important}
+</style>
+<script>
+(()=>{
+const G=window,BN={MIS:'نظم معلومات',Marketing:'تسويق',Accounting:'محاسبة'};
+const isStu=()=>AppState.user?.role==='student'&&!G.__ghost;
+const usave=()=>{Store.set('session',AppState.user);Cloud.saveUser(AppState.user);};
+const logAct=t=>{const u=AppState.user;u.log=[{txt:t,at:Date.now()}].concat(u.log||[]).slice(0,30);};
+const BADGES=[['owl','🦉','بومة الليل','ذاكر أو اختبر بعد منتصف الليل (12–5 ص)'],['flash','⚡','البرق','انهِ اختباراً بدرجة 85%+ في 5 دقائق أو أقل'],['legend','👑','أسطورة التحديات','اربح 5 مبارزات متتالية'],['dahih','📚','دحيح الدفعة','أتمم 10 اختبارات'],['survivor','🔥','الناجي','حقق 10+ في تحدي البقاء']];
+function award(id){const u=AppState.user;if(!isStu()||(u.badges||{})[id])return;const b=BADGES.find(x=>x[0]===id);
+ u.badges={...(u.badges||{}),[id]:Date.now()};logAct('حصلت على شارة '+b[2]);usave();showToast(`🏅 شارة جديدة: ${b[1]} ${b[2]}`,'success',6000);}
+
+document.body.insertAdjacentHTML('beforeend',`
+<div class="modal-backdrop" id="storeModal"><div class="modal"><div class="modal-header"><h3>🛒 متجر النقاط</h3><button class="modal-close" data-close="storeModal">×</button></div><div class="modal-body" id="storeBody"></div></div></div>
+<div class="hidden" id="ghBar" style="position:fixed;bottom:0;left:0;right:0;z-index:480;background:#8B5CF6;color:#fff;padding:10px;text-align:center;font-weight:700">👻 وضع الشبح — بتتصفح كطالب (للقراءة فقط) <button class="btn btn-sm btn-ghost" id="ghExit" style="color:#fff">خروج</button></div>`);
+$('.modal-close[data-close=storeModal]').onclick=()=>closeModal('storeModal');
+$('#sidebarZtona').insertAdjacentHTML('afterend','<a class="sidebar-link" id="sidebarStore">متجر النقاط</a>');
+
+/* حماية وضع الشبح من الكتابة */
+const _s0=Store.set;Store.set=(k,v)=>{if(G.__ghost&&k==='session')return;return _s0(k,v);};
+const _su=Cloud.saveUser;Cloud.saveUser=async u=>{if(G.__ghost)return;return _su(u);};
+const _hb=Cloud.sendHeartbeat;Cloud.sendHeartbeat=async i=>{if(G.__ghost)return;return _hb(i);};
+
+/* الشارات + سجل النشاط */
+const _ss3=Cloud.saveScore;
+Cloud.saveScore=async s=>{if(G.__ghost)return;await _ss3(s);if(!isStu())return;
+ logAct(`أتممت اختبار ${APP_DATA.subjects[s.subjectId]?.name||''} (${s.pct}%)`);usave();
+ if(new Date().getHours()<5)award('owl');
+ if((await Cloud.getScores()).filter(x=>x.userName===AppState.user.name).length>=10)award('dahih');};
+const _ser3=showExamResult;
+showExamResult=async(r,a)=>{await _ser3(r,a);if(isStu()&&r.pct>=85&&r.total>=5&&r.elapsedMin<=5)award('flash');};
+const _sd=submitDuel;
+submitDuel=async()=>{await _sd();if(!isStu())return;const t=$('#duelRunnerBody').textContent,u=AppState.user;
+ if(t.includes('أنت كسبت')){u.streak=(u.streak||0)+1;logAct('فزت في مبارزة 1v1');if(u.streak>=5)award('legend');}
+ else if(t.includes('صاحبك كسب')){u.streak=0;logAct('خسرت مبارزة 1v1');}usave();};
+const _os3=openSubjectPage;
+openSubjectPage=async(...a)=>{await _os3(...a);if(isStu()&&new Date().getHours()<5)award('owl');};
+
+/* المتجر */
+const ITEMS=[['f_gold','frame','gold','إطار ذهبي',100],['f_neon','frame','neon','إطار نيون',200],['f_royal','frame','royal','إطار ملكي',300],['t_prince','title','البرنس','لقب: البرنس',150],['t_eco','title','وحش الاقتصاد','لقب: وحش الاقتصاد',150],['t_mis','title','عراب النظم','لقب: عراب النظم',150]];
+function renderStore(){const u=AppState.user;u.owned=u.owned||[];
+ $('#storeBody').innerHTML=`<p class="mb-2">رصيدك: <strong>${u.xp||0} XP</strong></p>`+ITEMS.map(([id,ty,v,lb,c])=>{const own=u.owned.includes(id),on=(ty==='frame'?u.frame:u.title)===v;
+  return `<div class="qbank-item flex between center"><span>${lb} <span class="badge badge-warning">${c} XP</span></span><button class="btn btn-sm ${own?'btn-ghost':'btn-primary'}" data-id="${id}">${on?'مُفعّل ✅':own?'تفعيل':'شراء'}</button></div>`;}).join('');
+ $$('#storeBody button').forEach(b=>b.onclick=()=>{const [id,ty,v,lb,c]=ITEMS.find(x=>x[0]===b.dataset.id);
+  if(!u.owned.includes(id)){if((u.xp||0)<c)return showToast('نقاطك مش كفاية','warning');u.xp-=c;u.owned.push(id);logAct('اشتريت '+lb+' من المتجر');renderUserChip();}
+  if(ty==='frame')u.frame=v;else u.title=v;usave();renderStore();showToast('تم','success');});}
+$('#sidebarStore').onclick=()=>{closeSidebar();if(!isStu())return showToast('المتجر للطلاب المسجلين فقط','warning');renderStore();openModal('storeModal');};
+
+/* البروفايل: دولاب الجوائز + السجل + الإطار واللقب */
+const _rp3=renderProfile;
+renderProfile=async()=>{await _rp3();const u=AppState.user;if(!u||u.role==='guest')return;
+ const after=$('#radarCard')||$('#idCard')||$('#profileCard'),B=u.badges||{};
+ let c=$('#trophyCard');if(!c){c=document.createElement('div');c.id='trophyCard';c.className='card mt-3';after.after(c);}
+ c.innerHTML='<h3 class="mb-2">🏆 دولاب الجوائز</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+BADGES.map(([id,ic,nm,h])=>B[id]
+  ?`<div class="text-center" title="${escapeHtml(h)}"><div style="font-size:2.2rem">${ic}</div><div class="text-xs"><strong>${nm}</strong></div></div>`
+  :`<div class="text-center" title="${escapeHtml(h)}" style="opacity:.45;filter:grayscale(1)"><div style="font-size:2.2rem">${ic}<span style="font-size:1rem">🔒</span></div><div class="text-xs">${nm}</div><div class="text-xs">${h}</div></div>`).join('')+'</div>';
+ let t=$('#timelineCard');if(!t){t=document.createElement('div');t.id='timelineCard';t.className='card mt-3';c.after(t);}
+ t.innerHTML='<h3 class="mb-2">🕒 آخر نشاطاتي</h3>'+((u.log||[]).length?u.log.slice(0,10).map(x=>`<div class="notif-item"><strong>${escapeHtml(x.txt)}</strong><small>${new Date(x.at).toLocaleString('ar-EG')}</small></div>`).join(''):'<p class="text-muted text-sm">لسه مفيش نشاط</p>');
+ if(u.frame){$('.profile-avatar')?.classList.add('fr-'+u.frame);$('.idcard')?.classList.add('fr-'+u.frame);}
+ if(u.title)$('#profileCard .profile-name')?.insertAdjacentHTML('afterend',`<div class="mb-1">🎖️ ${escapeHtml(u.title)}</div>`);};
+
+/* تحدي البقاء */
+async function survival(sid){
+ const qs=shuffle((await Cloud.getQuestions(sid)).filter(q=>q.options&&q.options.length>1));
+ if(qs.length<3)return showToast('الأسئلة مش كفاية','warning');
+ closeModal('examSetupModal');openModal('duelRunnerModal');
+ $('#duelRunnerTitle').textContent='تحدي البقاء — '+APP_DATA.subjects[sid].name;
+ const u=AppState.user;u.survBest=u.survBest||{};let i=0,hp=3,sc=0;
+ const alive=()=>$('#duelRunnerModal').classList.contains('active');
+ const end=()=>{const nb=sc>(u.survBest[sid]||0);if(nb)u.survBest[sid]=sc;
+  $('#duelRunnerBody').innerHTML=`<div class="result-hero"><div class="score-num">${sc}</div><div class="grade">${hp<=0?'خلصت القلوب 💔':'خلصت الأسئلة!'}</div>${nb?'<div class="mt-1">🏆 رقم قياسي جديد!</div>':''}</div><button class="btn btn-primary btn-block mt-2" onclick="closeModal('duelRunnerModal')">تم</button>`;
+  if(isStu()){logAct(`تحدي البقاء: ${sc} إجابة في ${APP_DATA.subjects[sid].name}`);usave();if(sc>0)addXP(sc*2);if(sc>=10)award('survivor');}};
+ const show=()=>{if(!alive())return;if(hp<=0||i>=qs.length)return end();
+  const q=qs[i],right=q.options[q.correct],opts=shuffle(q.options);
+  $('#duelRunnerBody').innerHTML=`<div class="exam-timer-text"><span>${'❤️'.repeat(hp)}</span><span>النقاط: ${sc} | الأعلى: ${u.survBest[sid]||0}</span></div><div class="question-card"><div class="question-text">${escapeHtml(q.question)}</div><div class="options-list">${opts.map((o,k)=>`<div class="option" data-k="${k}"><span>${escapeHtml(o)}</span></div>`).join('')}</div></div>`;
+  $$('#duelRunnerBody .option').forEach(el=>el.onclick=()=>{
+   const ok=opts[el.dataset.k]===right;el.classList.add(ok?'correct':'wrong');
+   $$('#duelRunnerBody .option').forEach(x=>{if(opts[x.dataset.k]===right)x.classList.add('correct');x.style.pointerEvents='none';});
+   ok?sc++:hp--;i++;setTimeout(show,900);});};
+ show();}
+const _oes3=openExamSetup;
+openExamSetup=async sid=>{await _oes3(sid);if(!isStu()||!(await Cloud.getQuestions(sid)).length)return;
+ const b=$('#examSetupBody');if(b&&!$('#survBtn')){b.insertAdjacentHTML('beforeend','<button class="btn btn-danger btn-block mt-1" id="survBtn">تحدي البقاء ❤️❤️❤️</button>');$('#survBtn').onclick=()=>survival(sid);}};
+
+/* الدوريات (من الإدارة) */
+async function renderLeagues(){
+ const L=(await Cloud.getConfig('leagues',[])).filter(l=>!l.end||l.end>Date.now());
+ document.body.classList.toggle('hasLeagues',L.length>0);
+ let c=$('#leaguesBox');if(!c){c=document.createElement('div');c.id='leaguesBox';$('#readinessSection').before(c);}
+ const us=await Cloud.getUsers(),sum=b=>us.filter(u=>u.branch===b).reduce((a,u)=>a+(u.xp||0),0);
+ c.innerHTML=L.map(l=>{const a=Math.max(0,sum(l.a)-l.baseA),b=Math.max(0,sum(l.b)-l.baseB),t=a+b||1;
+  return `<div class="card mb-3"><strong>⚔️ ${escapeHtml(l.title||'دوري')}: ${BN[l.a]} ضد ${BN[l.b]}</strong><div class="flex between text-sm mt-1"><span>${BN[l.a]} ${a} XP</span><span>${BN[l.b]} ${b} XP</span></div><div style="display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--bg-soft)"><div style="width:${a/t*100}%;background:var(--grad-secondary);transition:width .8s"></div><div style="width:${b/t*100}%;background:var(--grad-primary);transition:width .8s"></div></div><p class="text-sm text-center mt-1">${a===b?'تعادل!':a>b?'المتصدر: '+BN[l.a]+' 🏆':'المتصدر: '+BN[l.b]+' 🏆'}</p>${l.end?`<p class="text-xs text-muted text-center">ينتهي ${new Date(l.end).toLocaleString('ar-EG')}</p>`:''}</div>`;}).join('');}
+const _nt3=navigateTo;navigateTo=p=>{_nt3(p);if(p==='home')renderLeagues();};
+async function renderLgAdmin(){
+ const L=await Cloud.getConfig('leagues',[]);
+ $('#lgList').innerHTML=L.length?L.map(l=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(l.title||'دوري')}: ${BN[l.a]} ضد ${BN[l.b]}</div><div class="qb-meta"><span class="badge ${!l.end||l.end>Date.now()?'badge-success':'badge-warning'}">${!l.end||l.end>Date.now()?'نشط':'منتهي'}</span></div><div class="qb-actions"><button class="btn btn-danger btn-xs" data-l="${l.id}">حذف</button></div></div>`).join(''):'<p class="text-muted">لا توجد دوريات</p>';
+ $$('#lgList [data-l]').forEach(b=>b.onclick=async()=>{await Cloud.saveConfig('leagues',L.filter(x=>x.id!==b.dataset.l));renderLgAdmin();renderLeagues();});}
+
+/* توقيت النشر والاختفاء */
+const live=x=>{const n=Date.now();return(!x.publishAt||x.publishAt<=n)&&(!x.expireAt||x.expireAt>n);};
+const _gn=Cloud.getNotes;Cloud.getNotes=async s=>{const a=await _gn(s);return G.__admin?a:a.filter(live);};
+const _gq3=Cloud.getQuestions;Cloud.getQuestions=async s=>{const a=await _gq3(s);return G.__admin?a:a.filter(live);};
+const _sq3=Cloud.saveQuestions;
+Cloud.saveQuestions=async(sid,arr)=>{const old=Store.get('questions_'+sid,[]),p=$('#qPub')?.value,e=$('#qExp')?.value;
+ if(p||e)arr.forEach(q=>{if(!old.some(o=>o.id===q.id)){if(p)q.publishAt=new Date(p).getTime();if(e)q.expireAt=new Date(e).getTime();}});return _sq3(sid,arr);};
+
+/* لوحة الإدارة */
+const _ia3=initAdminDashboard;
+initAdminDashboard=()=>{_ia3();patchAdmin3();};
+async function patchAdmin3(){
+ const bo=Object.entries(BN).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+ if(!$('#lgTab')){
+  $('.admin-tabs').insertAdjacentHTML('beforeend','<div class="admin-tab" id="lgTab" data-atab="leagues">الدوريات</div>');
+  $('#adminPanelReports').insertAdjacentHTML('afterend',`<div class="admin-panel" id="adminPanelLeagues"><div class="admin-section-title">إنشاء دوري جديد</div><div class="form-group"><label>اسم الدوري</label><input class="form-control" id="lgTitle" placeholder="دوري الأسبوع"></div><div class="form-row"><div class="form-group"><label>الفريق الأول</label><select class="form-control" id="lgA">${bo}</select></div><div class="form-group"><label>الفريق الثاني</label><select class="form-control" id="lgB">${bo}</select></div></div><div class="form-group"><label>تاريخ الانتهاء (اختياري)</label><input type="datetime-local" class="form-control" id="lgEnd"></div><button class="btn btn-primary" id="lgCreate">إنشاء الدوري</button><p class="form-hint">النقاط بتتحسب من لحظة إنشاء الدوري.</p><div id="lgList" class="mt-3"></div></div>`);
+  $('#lgB').selectedIndex=1;
+  $('#lgCreate').onclick=async()=>{const a=$('#lgA').value,b=$('#lgB').value;if(a===b)return showToast('اختار شعبتين مختلفتين','warning');
+   const us=await Cloud.getUsers(),sum=x=>us.filter(u=>u.branch===x).reduce((s,u)=>s+(u.xp||0),0),e=$('#lgEnd').value;
+   const L=await Cloud.getConfig('leagues',[]);L.push({id:uid(),a,b,title:$('#lgTitle').value.trim(),baseA:sum(a),baseB:sum(b),end:e?new Date(e).getTime():0,at:Date.now()});
+   await Cloud.saveConfig('leagues',L);$('#lgTitle').value='';showToast('تم إنشاء الدوري','success');renderLgAdmin();renderLeagues();};
+  $('#adminPanelSite').insertAdjacentHTML('beforeend',`<div style="height:1px;background:var(--border);margin:20px 0"></div><div class="admin-section-title">👻 وضع الشبح (معاينة كطالب)</div><select class="form-control" id="ghSel"></select><button class="btn btn-secondary mt-1" id="ghGo">ابدأ المعاينة</button>`);
+  $('#adminPanelStudy').insertAdjacentHTML('beforeend',`<div class="form-row mt-2"><div class="form-group"><label>نشر الملخص من (اختياري)</label><input type="datetime-local" class="form-control" id="notePub"></div><div class="form-group"><label>إخفاؤه في (اختياري)</label><input type="datetime-local" class="form-control" id="noteExp"></div></div>`);
+  $('#singleModel').parentElement.insertAdjacentHTML('afterend',`<div class="form-row"><div class="form-group"><label>نشر السؤال من (اختياري)</label><input type="datetime-local" class="form-control" id="qPub"></div><div class="form-group"><label>إخفاؤه في (اختياري)</label><input type="datetime-local" class="form-control" id="qExp"></div></div>`);
+ }
+ $('#lgTab').onclick=()=>{$$('.admin-tab').forEach(x=>x.classList.remove('active'));$('#lgTab').classList.add('active');$$('.admin-panel').forEach(p=>p.classList.remove('active'));$('#adminPanelLeagues').classList.add('active');renderLgAdmin();};
+ $('#notesSubmitBtn').onclick=async()=>{
+  const sid=$('#notesSubject').value,title=$('#notesChapter').value.trim(),content=$('#notesContent').value.trim();
+  if(!title||!content)return showToast('أكمل البيانات','warning');
+  const n=await Cloud.getNotes(sid),it={title,content},p=$('#notePub').value,e=$('#noteExp').value;
+  if(p)it.publishAt=new Date(p).getTime();if(e)it.expireAt=new Date(e).getTime();
+  n.push(it);await Cloud.saveNotes(sid,n);$('#notesChapter').value='';$('#notesContent').value='';showToast('تم إضافة الملخص','success');};
+ const us=await Cloud.getUsers();
+ $('#ghSel').innerHTML=Object.entries(BN).map(([k,v])=>`<option value="b:${k}">كل طلاب ${v} (معاينة عامة)</option>`).join('')+us.map(u=>`<option value="u:${u.id}">${escapeHtml(u.name)}</option>`).join('');
+ $('#ghGo').onclick=()=>{const v=$('#ghSel').value;let g;
+  if(v[0]==='u')g={...us.find(x=>x.id===v.slice(2))};else{const b=v.slice(2);g={id:'ghost',name:'معاينة '+BN[b],branch:b,role:'student',xp:0,wrongQuestions:[]};}
+  if(!g.id)return;G.__real=AppState.user;G.__ghost=true;G.__admin=false;AppState.user=g;closeModal('adminDashboardModal');ghRefresh();$('#ghBar').classList.remove('hidden');};
+}
+function ghRefresh(){renderUserChip();renderSidebarUser();applyGuestRestrictions();startCountdown();renderSubjects();renderStudySubjects();renderExamSubjects();navigateTo('home');}
+$('#ghExit').onclick=()=>{AppState.user=G.__real;G.__ghost=false;G.__admin=true;$('#ghBar').classList.add('hidden');ghRefresh();};
+})();
+</script>
+
+
+
+
+
+
+
+
+
 </body>
 </html>
