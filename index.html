@@ -1442,6 +1442,51 @@ const Cloud = (() => {
       Store.set('users', arr); setOnline(true); return arr;
     } catch (e) { setOnline(false); return local; }
   }
+  async function findUserByPin(pin) {
+    const clean = String(pin || '').trim();
+    if (!clean) return null;
+    const local = Store.get('users', []).find(u => u.pin === clean);
+    if (!firebaseReady) return local || null;
+    try {
+      const snap = await db.collection('users').where('pin', '==', clean).limit(1).get();
+      setOnline(true);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+      return local || null;
+    } catch (e) { setOnline(false); return local || null; }
+  }
+  async function findUserByStudentId(sid) {
+    const clean = String(sid || '').trim();
+    if (!clean) return null;
+    const local = Store.get('users', []).find(u => u.studentId === clean);
+    if (!firebaseReady) return local || null;
+    try {
+      const snap = await db.collection('users').where('studentId', '==', clean).limit(1).get();
+      setOnline(true);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+      return local || null;
+    } catch (e) { setOnline(false); return local || null; }
+  }
+  async function findUserByAuthUid(authUid) {
+    const clean = String(authUid || '').trim();
+    if (!clean) return null;
+    const local = Store.get('users', []).find(u => u.authUid === clean);
+    if (!firebaseReady) return local || null;
+    try {
+      const snap = await db.collection('users').where('authUid', '==', clean).limit(1).get();
+      setOnline(true);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+      return local || null;
+    } catch (e) { setOnline(false); return local || null; }
+  }
   async function saveUser(user) {
     const users = Store.get('users', []);
     const idx = users.findIndex(u => u.id === user.id);
@@ -1637,7 +1682,7 @@ const Cloud = (() => {
   setOnline(online);
   return {
     getQuestions, saveQuestions, getNotes, saveNotes, getFlashcards, saveFlashcards, getZtona, saveZtona,
-    getUsers, saveUser, deleteUser, getTicker, saveTicker,
+    getUsers, findUserByPin, findUserByStudentId, findUserByAuthUid, saveUser, deleteUser, getTicker, saveTicker,
     getScores, saveScore, getNotifications, pushNotification,
     getConfig, saveConfig, deleteConfig, getReports, saveReport, resolveReport,
     createDuel, getDuel, updateDuel, watchDuel,
@@ -1753,9 +1798,11 @@ async function registerUser(name, branch, pinOrPass, studentId, phone) {
   if (!branch) return { ok: false, error: 'يرجى اختيار الشعبة' };
   if (pass.length < 8) return { ok: false, error: 'الباسوورد لازم يكون 8 خانات على الأقل' };
 
-  const users = await Cloud.getUsers();
-  if (cleanSid && users.some(u => u.studentId === cleanSid)) {
-    return { ok: false, error: 'ID المعهد ده مسجل بالفعل، جرب تسجيل الدخول' };
+  if (cleanSid) {
+    const existing = await Cloud.findUserByStudentId(cleanSid);
+    if (existing) {
+      return { ok: false, error: 'ID المعهد ده مسجل بالفعل، جرب تسجيل الدخول' };
+    }
   }
 
   let authUid = null;
@@ -1787,11 +1834,9 @@ async function loginUserSmart(idOrPin, pass) {
   const cleanPass = (pass || '').trim();
   if (!cleanInput) return { ok: false, error: 'أدخل ID المعهد أو الكود القديم' };
 
-  const users = await Cloud.getUsers();
-
-  // 1) التحقق هل ده كود قديم لطالب لسه محدثش حسابه
-  const legacyUser = users.find(u => u.pin === cleanInput && !u.authUid);
-  if (legacyUser) {
+  // 1) التحقق هل ده كود قديم لطالب لسه محدثش حسابه (استعلام واحد خفيف بدل سحب الدفعة كلها!)
+  const legacyUser = await Cloud.findUserByPin(cleanInput);
+  if (legacyUser && !legacyUser.authUid) {
     if (legacyUser.banned) return { ok: false, error: 'هذا الحساب محظور من الإدارة' };
     return { ok: false, needMigration: true, legacyPin: cleanInput };
   }
@@ -1804,7 +1849,7 @@ async function loginUserSmart(idOrPin, pass) {
   if (auth) {
     try {
       const cred = await auth.signInWithEmailAndPassword(studentIdToEmail(cleanInput), cleanPass);
-      const matched = users.find(u => u.authUid === cred.user.uid || u.studentId === cleanInput);
+      const matched = (await Cloud.findUserByAuthUid(cred.user.uid)) || (await Cloud.findUserByStudentId(cleanInput));
       if (!matched) return { ok: false, error: 'بيانات الحساب غير مكتملة في قاعدة البيانات' };
       if (matched.banned) {
         await auth.signOut();
@@ -1815,7 +1860,7 @@ async function loginUserSmart(idOrPin, pass) {
       return { ok: false, error: 'ID المعهد أو الباسوورد غير صحيح' };
     }
   } else {
-    const matched = users.find(u => u.studentId === cleanInput);
+    const matched = await Cloud.findUserByStudentId(cleanInput);
     if (!matched) return { ok: false, error: 'الحساب غير موجود' };
     if (matched.banned) return { ok: false, error: 'هذا الحساب محظور من الإدارة' };
     return { ok: true, user: matched };
@@ -1823,8 +1868,7 @@ async function loginUserSmart(idOrPin, pass) {
 }
 
 async function loginUserByPin(pin) {
-  const users = await Cloud.getUsers();
-  return users.find(u => u.pin === pin) || null;
+  return await Cloud.findUserByPin(pin);
 }
 
 /* ============ معالج تحديث الحسابات القديمة (3 مراحل: 6s -> 6s -> 16s -> ترحيب) ============ */
