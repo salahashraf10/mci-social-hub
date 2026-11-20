@@ -12,6 +12,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <style>
 :root {
@@ -673,12 +674,12 @@ select.form-control{cursor:pointer}
       <div class="path-card" id="registerCard">
         <div class="path-icon">+</div>
         <h3>إنشاء حساب جديد</h3>
-        <p>سجل بياناتك وأنشئ كودك السري</p>
+        <p>سجل بياناتك وأنشئ حسابك المؤمّن</p>
       </div>
       <div class="path-card login" id="loginCard">
         <div class="path-icon">→</div>
         <h3>عندك حساب؟</h3>
-        <p>ادخل بالكود السري بتاعك</p>
+        <p>ادخل ببياناتك أو حدث حسابك القديم</p>
       </div>
     </div>
   </div>
@@ -881,7 +882,7 @@ select.form-control{cursor:pointer}
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loadingText">جاري التحميل...</div>
-  <div class="loading-sub">لحظات من فضلك</div>
+  <div class="loading-sub" id="loadingSub">لحظات من فضلك</div>
   <div class="loading-progress"><div class="loading-progress-fill" id="loadingProgress"></div></div>
 </div>
 
@@ -897,12 +898,22 @@ select.form-control{cursor:pointer}
 
 <div class="modal-backdrop" id="registerModal">
   <div class="modal">
-    <div class="modal-header"><h3>تسجيل حساب طالب</h3><button class="modal-close" data-close="registerModal">×</button></div>
+    <div class="modal-header"><h3>إنشاء حساب طالب جديد</h3><button class="modal-close" data-close="registerModal">×</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label>الاسم الثلاثي</label>
         <input type="text" class="form-control" id="regName" placeholder="مثال: أحمد محمد علي" />
         <div class="form-error" id="regNameErr">يرجى إدخال الاسم الثلاثي</div>
+      </div>
+      <div class="form-group">
+        <label>ID المعهد (الرقم الجامعي)</label>
+        <input type="text" class="form-control" id="regStudentId" placeholder="مثال: 256888" inputmode="numeric" />
+        <div class="form-error" id="regStudentIdErr">يرجى إدخال ID المعهد الصحيح</div>
+      </div>
+      <div class="form-group">
+        <label>رقم الموبايل (واتساب)</label>
+        <input type="tel" class="form-control" id="regPhone" placeholder="01xxxxxxxxx" maxlength="11" inputmode="numeric" />
+        <div class="form-error" id="regPhoneErr">يرجى إدخال رقم موبايل صحيح مكون من 11 رقم</div>
       </div>
       <div class="form-group">
         <label>الشعبة</label>
@@ -915,25 +926,87 @@ select.form-control{cursor:pointer}
         <div class="form-error" id="regBranchErr">يرجى اختيار الشعبة</div>
       </div>
       <div class="form-group">
-        <label>الكود السري (4-6 أرقام)</label>
-        <input type="password" class="form-control" id="regPin" placeholder="مثال: 1234" maxlength="6" inputmode="numeric" />
-        <div class="form-error" id="regPinErr">الكود 4-6 أرقام</div>
+        <label>الباسوورد الجديد (8 خانات على الأقل)</label>
+        <input type="password" class="form-control" id="regPass" placeholder="حروف وأرقام (8 خانات فأكثر)" />
+        <div class="form-error" id="regPassErr">الباسوورد لازم يكون 8 خانات على الأقل</div>
       </div>
-      <button class="btn btn-primary btn-block mt-2" id="registerSubmitBtn">إنشاء الحساب</button>
+      <button class="btn btn-primary btn-block mt-2" id="registerSubmitBtn">إنشاء الحساب المؤمّن</button>
     </div>
   </div>
 </div>
 
 <div class="modal-backdrop" id="loginModal">
   <div class="modal">
-    <div class="modal-header"><h3>عندك حساب؟</h3><button class="modal-close" data-close="loginModal">×</button></div>
+    <div class="modal-header"><h3>تسجيل الدخول</h3><button class="modal-close" data-close="loginModal">×</button></div>
     <div class="modal-body">
       <div class="form-group">
-        <label>الكود السري الخاص بك</label>
-        <input type="password" class="form-control" id="loginPin" placeholder="أدخل الكود" maxlength="6" inputmode="numeric" />
-        <div class="form-error" id="loginPinErr">الكود غير صحيح أو غير موجود</div>
+        <label>ID المعهد (أو الكود السري القديم لو لسه محدثتش حسابك)</label>
+        <input type="text" class="form-control" id="loginIdOrPin" placeholder="أدخل ID المعهد أو الكود القديم" inputmode="numeric" />
       </div>
+      <div class="form-group" id="loginPassGroup">
+        <label>الباسوورد (سيبه فاضي لو بتدخل بالكود القديم لأول مرة)</label>
+        <input type="password" class="form-control" id="loginPass" placeholder="أدخل الباسوورد" />
+      </div>
+      <div class="form-error" id="loginPinErr">البيانات غير صحيحة أو الحساب غير موجود</div>
       <button class="btn btn-primary btn-block mt-2" id="loginSubmitBtn">دخول</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="migrateModal" data-static="true">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="migTitle">تحديث وتأمين حسابك القديم (1/3)</h3>
+    </div>
+    <div class="modal-body">
+      <div id="migStep1">
+        <p class="text-sm text-muted mb-2">اكتب الكود السري القديم بتاعك عشان نسترجع كل نقاطك (XP) وسجل امتحاناتك:</p>
+        <div class="form-group">
+          <label>الكود السري القديم</label>
+          <input type="password" class="form-control" id="migOldPin" placeholder="مثال: 17283" maxlength="6" inputmode="numeric" />
+          <div class="form-error" id="migStep1Err">الكود القديم غير صحيح أو تم تحديثه مسبقاً</div>
+        </div>
+        <button class="btn btn-primary btn-block mt-2" id="migStep1Btn">التحقق من الكود واسترجاع النقاط</button>
+      </div>
+
+      <div id="migStep2" class="hidden">
+        <p class="text-sm text-muted mb-2">تم العثور على حسابك بنجاح! اكتب رقم موبايلك لتأمين الحساب:</p>
+        <div class="form-group">
+          <label>رقم الموبايل (واتساب)</label>
+          <input type="tel" class="form-control" id="migPhone" placeholder="01xxxxxxxxx" maxlength="11" inputmode="numeric" />
+          <div class="form-error" id="migStep2Err">يرجى إدخال رقم موبايل صحيح مكون من 11 رقم</div>
+        </div>
+        <button class="btn btn-primary btn-block mt-2" id="migStep2Btn">التالي</button>
+      </div>
+
+      <div id="migStep3" class="hidden">
+        <p class="text-sm text-muted mb-2">الخطوة الأخيرة! اكتب بياناتك الجديدة عشان نربط بيها حسابك للأبد:</p>
+        <div class="form-group">
+          <label>الاسم الثلاثي الجديد</label>
+          <input type="text" class="form-control" id="migNewName" placeholder="اكتب اسمك الثلاثي" />
+        </div>
+        <div class="form-group">
+          <label>ID المعهد (الرقم الجامعي)</label>
+          <input type="text" class="form-control" id="migStudentId" placeholder="مثال: 253523" inputmode="numeric" />
+        </div>
+        <div class="form-group">
+          <label>الباسوورد الجديد (8 خانات على الأقل)</label>
+          <input type="password" class="form-control" id="migNewPass" placeholder="حروف وأرقام (8 خانات فأكثر)" />
+        </div>
+        <div class="form-error" id="migStep3Err">تأكد من كتابة الاسم، و ID المعهد، وباسوورد 8 خانات على الأقل</div>
+        <button class="btn btn-success btn-block mt-2" id="migStep3Btn">تأكيد ونقل نقاطي الآن</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="welcomeBackModal">
+  <div class="modal text-center" style="border: 2px solid var(--success);">
+    <div class="modal-body" style="padding: 36px 24px;">
+      <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
+      <h2 style="color: var(--success); margin-bottom: 8px;" id="wbTitle">أهلاً بيك في النسخة الجديدة!</h2>
+      <p class="text-muted mb-2" id="wbSub">تم تأمين حسابك ونقل كل نقاطك وسجل امتحاناتك بنجاح</p>
+      <div class="badge badge-gold" style="font-size: 1rem; padding: 8px 18px;" id="wbXpBadge">0 XP</div>
     </div>
   </div>
 </div>
@@ -1008,6 +1081,10 @@ select.form-control{cursor:pointer}
     </div>
   </div>
 </div>
+
+
+
+
 
 <div class="modal-backdrop" id="rescuePlanModal">
   <div class="modal modal-lg">
@@ -1193,11 +1270,12 @@ const firebaseConfig = {
   appId: "1:1010863229747:web:8fb672bfcca3cf61670c46"
 };
 
-let db = null, firebaseReady = false;
+let db = null, auth = null, firebaseReady = false;
 try {
   if (typeof firebase !== 'undefined') {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    if (firebase.auth) auth = firebase.auth();
     firebaseReady = true;
   }
 } catch (e) { console.warn('Firebase init failed', e); }
@@ -1609,42 +1687,308 @@ function toggleTheme() {
   AppState.theme = n; Store.set('theme', n); applyTheme(n);
 }
 
-async function registerUserWithLoading(name, branch, pin, text) {
+/* ============ Timed Loading & Auth / Migration Helpers ============ */
+async function runTimedLoading(seconds, text, subText) {
   const overlay = $('#loadingOverlay');
   const prog = $('#loadingProgress');
-  $('#loadingText').textContent = text || 'جاري إنشاء الحساب الخاص بك...';
-  overlay.classList.add('active');
-  prog.style.width = '0%';
+  const subEl = overlay ? overlay.querySelector('.loading-sub') : null;
+  if ($('#loadingText')) $('#loadingText').textContent = text || 'جاري التحميل...';
+  if (subEl) subEl.textContent = subText || 'لحظات من فضلك';
+  if (overlay) overlay.classList.add('active');
+  if (prog) prog.style.width = '0%';
+
   const start = Date.now();
-  const duration = 5000;
+  const duration = seconds * 1000;
   const timer = setInterval(() => {
     const pct = Math.min(99, ((Date.now() - start) / duration) * 100);
-    prog.style.width = pct + '%';
+    if (prog) prog.style.width = pct + '%';
   }, 100);
+
   await new Promise(r => setTimeout(r, duration));
   clearInterval(timer);
-  prog.style.width = '100%';
-  await new Promise(r => setTimeout(r, 300));
-  overlay.classList.remove('active');
+  if (prog) prog.style.width = '100%';
+  await new Promise(r => setTimeout(r, 250));
+  if (overlay) overlay.classList.remove('active');
+}
 
-  if (!name) return { ok: true };
+function studentIdToEmail(studentId) {
+  return String(studentId).trim() + '@mci.edu.eg';
+}
+
+async function createOrLinkFirebaseAuth(studentId, pass) {
+  if (!auth) return 'local_' + uid();
+  const email = studentIdToEmail(studentId);
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    return cred.user.uid;
+  } catch (e) {
+    if (e && e.code === 'auth/email-already-in-use') {
+      try {
+        const cred2 = await auth.signInWithEmailAndPassword(email, pass);
+        return cred2.user.uid;
+      } catch (e2) {
+        throw new Error('ID المعهد مسجل مسبقاً بباسوورد مختلف');
+      }
+    }
+    throw new Error('حدث خطأ أثناء تأمين الحساب، تأكد من الباسوورد واتصالك بالإنترنت');
+  }
+}
+
+async function registerUser(name, branch, pinOrPass, studentId, phone) {
+  // دعم التوافق لو تم استدعاء الدالة بالطريقة القديمة أو الجديدة
+  const cleanName = (name || '').trim();
+  const cleanSid = (studentId || '').trim();
+  const cleanPhone = (phone || '').trim();
+  const pass = (pinOrPass || '').trim();
+
+  if (!cleanName || cleanName.split(/\s+/).length < 2) return { ok: false, error: 'يرجى إدخال الاسم الثلاثي' };
+  if (cleanSid && !/^\d{4,12}$/.test(cleanSid)) return { ok: false, error: 'يرجى إدخال ID المعهد الصحيح' };
+  if (cleanPhone && !/^01\d{9}$/.test(cleanPhone)) return { ok: false, error: 'رقم الموبايل لازم يكون 11 رقم ويبدأ بـ 01' };
+  if (!branch) return { ok: false, error: 'يرجى اختيار الشعبة' };
+  if (pass.length < 8) return { ok: false, error: 'الباسوورد لازم يكون 8 خانات على الأقل' };
 
   const users = await Cloud.getUsers();
-  if (users.some(u => u.pin === pin)) return { ok: false, error: 'هذا الكود مستخدم بالفعل' };
-  const user = { id: uid(), name: name.trim(), branch, pin, role: 'student', createdAt: Date.now(), xp: 0, wrongQuestions: [] };
+  if (cleanSid && users.some(u => u.studentId === cleanSid)) {
+    return { ok: false, error: 'ID المعهد ده مسجل بالفعل، جرب تسجيل الدخول' };
+  }
+
+  let authUid = null;
+  try {
+    await runTimedLoading(5, 'جاري إنشاء وتأمين حسابك...', 'يتم الآن ربط بياناتك بالسحابة');
+    authUid = await createOrLinkFirebaseAuth(cleanSid || uid(), pass);
+  } catch (err) {
+    return { ok: false, error: err.message || 'تعذر إنشاء الحساب' };
+  }
+
+  const user = {
+    id: uid(),
+    authUid,
+    name: cleanName,
+    studentId: cleanSid,
+    phone: cleanPhone,
+    branch,
+    role: 'student',
+    createdAt: Date.now(),
+    xp: 0,
+    wrongQuestions: []
+  };
   await Cloud.saveUser(user);
   return { ok: true, user };
 }
 
-async function registerUser(name, branch, pin) {
-  if (!name.trim() || name.trim().split(/\s+/).length < 2) return { ok:false, error:'يرجى إدخال الاسم الثلاثي' };
-  if (!/^\d{4,6}$/.test(pin)) return { ok:false, error:'الكود 4-6 أرقام' };
-  return await registerUserWithLoading(name, branch, pin);
+async function loginUserSmart(idOrPin, pass) {
+  const cleanInput = (idOrPin || '').trim();
+  const cleanPass = (pass || '').trim();
+  if (!cleanInput) return { ok: false, error: 'أدخل ID المعهد أو الكود القديم' };
+
+  const users = await Cloud.getUsers();
+
+  // 1) التحقق هل ده كود قديم لطالب لسه محدثش حسابه
+  const legacyUser = users.find(u => u.pin === cleanInput && !u.authUid);
+  if (legacyUser) {
+    if (legacyUser.banned) return { ok: false, error: 'هذا الحساب محظور من الإدارة' };
+    return { ok: false, needMigration: true, legacyPin: cleanInput };
+  }
+
+  // 2) دخول بالـ ID المعهد + الباسوورد المؤمّن
+  if (!cleanPass) {
+    return { ok: false, error: 'أدخل الباسوورد الخاص بحسابك' };
+  }
+
+  if (auth) {
+    try {
+      const cred = await auth.signInWithEmailAndPassword(studentIdToEmail(cleanInput), cleanPass);
+      const matched = users.find(u => u.authUid === cred.user.uid || u.studentId === cleanInput);
+      if (!matched) return { ok: false, error: 'بيانات الحساب غير مكتملة في قاعدة البيانات' };
+      if (matched.banned) {
+        await auth.signOut();
+        return { ok: false, error: 'هذا الحساب محظور من الإدارة' };
+      }
+      return { ok: true, user: matched };
+    } catch (e) {
+      return { ok: false, error: 'ID المعهد أو الباسوورد غير صحيح' };
+    }
+  } else {
+    const matched = users.find(u => u.studentId === cleanInput);
+    if (!matched) return { ok: false, error: 'الحساب غير موجود' };
+    if (matched.banned) return { ok: false, error: 'هذا الحساب محظور من الإدارة' };
+    return { ok: true, user: matched };
+  }
 }
 
 async function loginUserByPin(pin) {
   const users = await Cloud.getUsers();
   return users.find(u => u.pin === pin) || null;
+}
+
+/* ============ معالج تحديث الحسابات القديمة (3 مراحل: 6s -> 6s -> 16s -> ترحيب) ============ */
+let _migInitialized = false;
+let _migTargetUser = null;
+let _migPhoneVal = '';
+
+function openMigrationWizard(prefillPin = '') {
+  _migTargetUser = null;
+  _migPhoneVal = '';
+  if ($('#migTitle')) $('#migTitle').textContent = 'تحديث وتأمين حسابك القديم (1/3)';
+  if ($('#migOldPin')) $('#migOldPin').value = prefillPin || '';
+  if ($('#migPhone')) $('#migPhone').value = '';
+  if ($('#migNewName')) $('#migNewName').value = '';
+  if ($('#migStudentId')) $('#migStudentId').value = '';
+  if ($('#migNewPass')) $('#migNewPass').value = '';
+  ['migStep1Err', 'migStep2Err', 'migStep3Err'].forEach(id => {
+    const el = $('#' + id);
+    if (el) el.classList.remove('show');
+  });
+  if ($('#migStep1')) $('#migStep1').classList.remove('hidden');
+  if ($('#migStep2')) $('#migStep2').classList.add('hidden');
+  if ($('#migStep3')) $('#migStep3').classList.add('hidden');
+  openModal('migrateModal');
+}
+
+function initMigrationWizard() {
+  if (_migInitialized) return;
+  _migInitialized = true;
+
+  const step1Btn = $('#migStep1Btn');
+  const step2Btn = $('#migStep2Btn');
+  const step3Btn = $('#migStep3Btn');
+
+  if (step1Btn) {
+    step1Btn.onclick = async () => {
+      const oldPin = ($('#migOldPin')?.value || '').trim();
+      const errEl = $('#migStep1Err');
+      if (errEl) errEl.classList.remove('show');
+
+      if (!oldPin) {
+        if (errEl) { errEl.textContent = 'يرجى كتابة الكود السري القديم'; errEl.classList.add('show'); }
+        return;
+      }
+
+      step1Btn.disabled = true;
+      await runTimedLoading(6, 'جاري التحقق من الكود واسترجاع نقاطك...', 'يتم البحث عن سجل حسابك القديم');
+      const users = await Cloud.getUsers();
+      const found = users.find(u => u.pin === oldPin && !u.authUid);
+      step1Btn.disabled = false;
+
+      if (!found) {
+        if (errEl) { errEl.textContent = 'الكود القديم غير صحيح أو تم تحديثه مسبقاً'; errEl.classList.add('show'); }
+        return;
+      }
+      if (found.banned) {
+        if (errEl) { errEl.textContent = 'هذا الحساب محظور من الإدارة'; errEl.classList.add('show'); }
+        return;
+      }
+
+      _migTargetUser = found;
+      if ($('#migNewName')) $('#migNewName').value = found.name || '';
+      if ($('#migTitle')) $('#migTitle').textContent = 'تحديث وتأمين حسابك القديم (2/3)';
+      $('#migStep1').classList.add('hidden');
+      $('#migStep2').classList.remove('hidden');
+    };
+  }
+
+  if (step2Btn) {
+    step2Btn.onclick = async () => {
+      const phone = ($('#migPhone')?.value || '').trim();
+      const errEl = $('#migStep2Err');
+      if (errEl) errEl.classList.remove('show');
+
+      if (!/^01\d{9}$/.test(phone)) {
+        if (errEl) { errEl.textContent = 'يرجى إدخال رقم موبايل صحيح مكون من 11 رقم ويبدأ بـ 01'; errEl.classList.add('show'); }
+        return;
+      }
+
+      step2Btn.disabled = true;
+      await runTimedLoading(6, 'جاري ربط رقم الموبايل وتأمين الجلسة...', 'يرجى الانتظار لحظات');
+      step2Btn.disabled = false;
+
+      _migPhoneVal = phone;
+      if ($('#migTitle')) $('#migTitle').textContent = 'تحديث وتأمين حسابك القديم (3/3)';
+      $('#migStep2').classList.add('hidden');
+      $('#migStep3').classList.remove('hidden');
+    };
+  }
+
+  if (step3Btn) {
+    step3Btn.onclick = async () => {
+      const newName = ($('#migNewName')?.value || '').trim();
+      const studentId = ($('#migStudentId')?.value || '').trim();
+      const newPass = ($('#migNewPass')?.value || '').trim();
+      const errEl = $('#migStep3Err');
+      if (errEl) errEl.classList.remove('show');
+
+      if (!_migTargetUser) {
+        openMigrationWizard();
+        return;
+      }
+      if (!newName || newName.split(/\s+/).length < 2) {
+        if (errEl) { errEl.textContent = 'يرجى إدخال الاسم الثلاثي الجديد'; errEl.classList.add('show'); }
+        return;
+      }
+      if (!/^\d{4,12}$/.test(studentId)) {
+        if (errEl) { errEl.textContent = 'يرجى إدخال ID المعهد الصحيح'; errEl.classList.add('show'); }
+        return;
+      }
+      if (newPass.length < 8) {
+        if (errEl) { errEl.textContent = 'الباسوورد الجديد لازم يكون 8 خانات على الأقل'; errEl.classList.add('show'); }
+        return;
+      }
+
+      step3Btn.disabled = true;
+      const users = await Cloud.getUsers();
+      if (users.some(u => u.studentId === studentId && u.id !== _migTargetUser.id)) {
+        step3Btn.disabled = false;
+        if (errEl) { errEl.textContent = 'ID المعهد ده مستخدم في حساب تاني بالفعل'; errEl.classList.add('show'); }
+        return;
+      }
+
+      let authUid = null;
+      try {
+        // تشغيل شاشة التحميل لمدة 16 ثانية مع تنفيذ الربط الفعلي في الخلفية
+        const loadingTask = runTimedLoading(
+          16,
+          'جاري إنشاء حسابك المؤمّن ونقل نقاطك...',
+          `يتم الآن نقل ${_migTargetUser.xp || 0} XP وسجل امتحاناتك بالكامل`
+        );
+
+        authUid = await createOrLinkFirebaseAuth(studentId, newPass);
+
+        const upgradedUser = {
+          id: uid(),
+          authUid,
+          name: newName,
+          studentId,
+          phone: _migPhoneVal,
+          branch: _migTargetUser.branch || 'MIS',
+          role: _migTargetUser.role || 'student',
+          xp: _migTargetUser.xp || 0,
+          wrongQuestions: _migTargetUser.wrongQuestions || [],
+          migratedFrom: _migTargetUser.id,
+          createdAt: Date.now()
+        };
+
+        await Cloud.saveUser(upgradedUser);
+        await Cloud.deleteUser(_migTargetUser.id);
+        await loadingTask;
+
+        step3Btn.disabled = false;
+        closeModal('migrateModal');
+        setSession(upgradedUser);
+
+        // عرض رسالة الترحيب لمدة 4 ثواني ثم إخفاؤها تلقائياً
+        const firstName = upgradedUser.name.split(/\s+/)[0] || upgradedUser.name;
+        if ($('#wbTitle')) $('#wbTitle').textContent = `أهلاً بيك يا ${firstName} في النسخة الجديدة!`;
+        if ($('#wbSub')) $('#wbSub').textContent = 'تم تأمين حسابك ونقل كل نقاطك وسجل امتحاناتك بنجاح';
+        if ($('#wbXpBadge')) $('#wbXpBadge').textContent = `${upgradedUser.xp || 0} XP`;
+        openModal('welcomeBackModal');
+        setTimeout(() => closeModal('welcomeBackModal'), 4000);
+      } catch (err) {
+        step3Btn.disabled = false;
+        $('#loadingOverlay')?.classList.remove('active');
+        if (errEl) { errEl.textContent = err.message || 'حدث خطأ أثناء تحديث الحساب'; errEl.classList.add('show'); }
+      }
+    };
+  }
 }
 
 function setSession(user) {
@@ -1660,6 +2004,9 @@ function loginGuest(branch) {
 }
 
 function logout() {
+  if (auth && auth.currentUser) {
+    try { auth.signOut(); } catch (e) {}
+  }
   AppState.user = null; Store.remove('session'); location.reload();
 }
 
@@ -1673,6 +2020,12 @@ async function afterLogin() {
   $('#welcomeScreen').style.display = 'none';
   $('#mainApp').style.display = 'block';
   $('#mainFooter').style.display = 'block';
+  initMigrationWizard();
+
+  // لو طالب قديم فتح الموقع وحسابه القديم لسه متسجل بدون authUid نفتحله التحديث تلقائياً
+  if (AppState.user && AppState.user.role !== 'guest' && !AppState.user.authUid) {
+    openMigrationWizard(AppState.user.pin || '');
+  }
   
   renderUserChip();
   renderSidebarUser();
@@ -1752,7 +2105,7 @@ function applyGuestRestrictions() {
   }
 }
 
-/* ============ renderComingSoon (NEW) ============ */
+/* ============ renderComingSoon ============ */
 function renderComingSoon() {
   const items = APP_DATA.comingSoon || [];
   const html = items.map(item => `
@@ -1783,7 +2136,7 @@ function renderComingSoon() {
   });
 }
 
-/* ============ renderSubjectDropdowns (NEW) ============ */
+/* ============ renderSubjectDropdowns ============ */
 function renderSubjectDropdowns() {
   const subjects = APP_DATA.subjects || {};
   const options = Object.entries(subjects).map(([key, subj]) => 
@@ -1993,10 +2346,12 @@ async function renderProfile() {
   const totalExams = scores.length;
   const avg = totalExams > 0 ? Math.round(scores.reduce((a,b)=>a+b.pct,0)/totalExams) : 0;
   const wrongCount = (AppState.user.wrongQuestions || []).length;
+  const sidBadge = AppState.user.studentId ? `<div style="font-size:0.85rem;opacity:0.9;margin-bottom:8px;">ID المعهد: ${escapeHtml(AppState.user.studentId)}</div>` : '';
   
   $('#profileCard').innerHTML = `
     <div class="profile-avatar">${AppState.user.name.charAt(0)}</div>
     <h2 class="profile-name">${escapeHtml(AppState.user.name)}</h2>
+    ${sidBadge}
     <span class="profile-branch">${APP_DATA.branches[AppState.user.branch]?.name || ''}</span>
     <div class="profile-xp">${AppState.user.xp || 0}</div>
     <div class="profile-xp-label">نقطة خبرة (XP)</div>
@@ -2036,6 +2391,15 @@ async function renderWrongsPage() {
     };
   });
 }
+
+
+
+
+
+
+
+
+
 
 async function startWrongExam(sid) {
   const wrongQs = (AppState.user.wrongQuestions || []).filter(w => w.subjectId === sid);
@@ -2714,7 +3078,7 @@ function initDuel() {
       status: 'waiting',
       players: {}
     };
-    await registerUserWithLoading(null, null, null, 'جاري تجهيز التحدي...');
+    await runTimedLoading(2, 'جاري تجهيز التحدي...', 'يتم تجهيز الأسئلة وكود التحدي');
     await Cloud.createDuel(duel);
     $('#duelCodeDisplay').textContent = code;
     $('#duelExpiresAt').textContent = new Date(expiresAt).toLocaleTimeString('ar-EG');
@@ -2949,6 +3313,7 @@ function initAuthHandlers() {
   $('#registerCard').onclick = () => openModal('registerModal');
   $('#guestCard').onclick = () => openModal('guestBranchModal');
   $('#loginCard').onclick = () => openModal('loginModal');
+  if ($('#migrateCard')) $('#migrateCard').onclick = () => openMigrationWizard();
   $('#lockRegisterBtn').onclick = () => openModal('registerModal');
   $('#lockRegisterBtn2').onclick = () => openModal('registerModal');
   
@@ -2956,36 +3321,11 @@ function initAuthHandlers() {
     if (AppState.user?.role === 'guest') openModal('registerModal');
   };
   
-  $('#registerSubmitBtn').onclick = async () => {
-    const name = $('#regName').value, branch = $('#regBranch').value, pin = $('#regPin').value;
-    let ok = true;
-    ['regNameErr','regBranchErr','regPinErr'].forEach(id => $('#'+id).classList.remove('show'));
-    if (!name.trim() || name.trim().split(/\s+/).length < 2) { $('#regNameErr').classList.add('show'); ok=false; }
-    if (!branch) { $('#regBranchErr').classList.add('show'); ok=false; }
-    if (!/^\d{4,6}$/.test(pin)) { $('#regPinErr').classList.add('show'); ok=false; }
-    if (!ok) return;
-    const res = await registerUser(name, branch, pin);
-    if (!res.ok) { $('#regPinErr').textContent = res.error; $('#regPinErr').classList.add('show'); return; }
-    closeModal('registerModal');
-    setSession(res.user);
-    showToast('تم إنشاء حسابك بنجاح', 'success');
-  };
-  
   $('#guestEnterBtn').onclick = () => {
     const branch = $('#guestBranch').value;
     closeModal('guestBranchModal');
     loginGuest(branch);
     showToast('دخلت كزائر — المذاكرة متاحة، الامتحانات مقفولة', 'info');
-  };
-  
-  $('#loginSubmitBtn').onclick = async () => {
-    const pin = $('#loginPin').value;
-    $('#loginPinErr').classList.remove('show');
-    const user = await loginUserByPin(pin);
-    if (!user) { $('#loginPinErr').classList.add('show'); return; }
-    closeModal('loginModal');
-    setSession(user);
-    showToast('تم تسجيل الدخول', 'success');
   };
 }
 
@@ -2996,18 +3336,6 @@ function initSecretAdmin() {
     clearTimeout(secretTimer);
     secretTimer = setTimeout(() => secretClicks = 0, 2000);
     if (secretClicks >= 5) { secretClicks = 0; openModal('adminLoginModal'); }
-  };
-  $('#adminLoginBtn').onclick = () => {
-    const pass = $('#adminPassword').value;
-    if (pass === '123') {
-      closeModal('adminLoginModal');
-      $('#adminPassword').value = '';
-      openModal('adminDashboardModal');
-      initAdminDashboard();
-      showToast('مرحباً ليدر الدفعة', 'success');
-    } else {
-      $('#adminPassErr').classList.add('show');
-    }
   };
 }
 
@@ -3310,6 +3638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initNav();
   initSidebar();
   initAuthHandlers();
+  initMigrationWizard();
   initSecretAdmin();
   initLeaderMsg();
   initStudyTimer();
@@ -3355,15 +3684,6 @@ function initModals() {
   });
 }
 </script>
-
-
-
-
-
-
-
-
-
 
 <style>
 .subject-card{--sc:#2563EB;border-top:4px solid var(--sc)}
@@ -3439,9 +3759,34 @@ initAdminDashboard=()=>{_ia();patchAdmin();};
 function patchAdmin(){
  if(!$('#singleDiff')){
   $('#singleType').insertAdjacentHTML('beforeend','<option value="essay">مقالي (Essay)</option>');
-  $('#singleExplain').parentElement.insertAdjacentHTML('afterend','<div class="form-row"><div class="form-group"><label>الفصل / الوحدة</label><input class="form-control" id="singleChapter"></div><div class="form-group"><label>الصعوبة</label><select class="form-control" id="singleDiff"><option value="easy">سهل</option><option value="mid" selected>متوسط</option><option value="hard">للمتفوقين</option></select></div></div><div class="form-group"><label>الإجابة النموذجية (للمقالي فقط)</label><input class="form-control" id="singleModel"></div>');
+  $('#singleExplain').parentElement.insertAdjacentHTML('afterend','<div class="form-row"><div class="form-group"><label>الفصل / الوحدة</label><input class="form-control" id="singleChapter"></div><div class="form-group"><label>الصعوبة</label><select class="form-control" id="singleDiff"><option value="easy">سهل</option><option value="mid" selected>متوسط</option><option value="hard">للمتفوقين</option></select></div></div><div class="form-group hidden" id="singleModelWrap"><label>الإجابة النموذجية (للمقالي فقط)</label><textarea class="form-control" id="singleModel" rows="2"></textarea></div>');
   $('#bulkText').insertAdjacentHTML('beforebegin','<div class="bulk-help">'+escapeHtml(BULK_HELP)+'</div>');
  }
+
+ const syncSingleFormUI = () => {
+  const tp = $('#singleType').value;
+  const optRows = ['singleOptA','singleOptB','singleOptC','singleOptD'].map(id => $('#'+id)?.closest('.form-row')).filter(Boolean);
+  const corrGroup = $('#singleCorrect')?.closest('.form-group');
+  const modelWrap = $('#singleModelWrap');
+  if (tp === 'tf') {
+   optRows.forEach(r => r.style.display = 'none');
+   if (corrGroup) corrGroup.style.display = '';
+   $('#singleCorrect').innerHTML = '<option value="0">صح</option><option value="1">خطأ</option>';
+   if (modelWrap) modelWrap.classList.add('hidden');
+  } else if (tp === 'essay') {
+   optRows.forEach(r => r.style.display = 'none');
+   if (corrGroup) corrGroup.style.display = 'none';
+   if (modelWrap) modelWrap.classList.remove('hidden');
+  } else {
+   optRows.forEach(r => r.style.display = '');
+   if (corrGroup) corrGroup.style.display = '';
+   $('#singleCorrect').innerHTML = '<option value="0">أ</option><option value="1">ب</option><option value="2">ج</option><option value="3">د</option>';
+   if (modelWrap) modelWrap.classList.add('hidden');
+  }
+ };
+ $('#singleType').onchange = syncSingleFormUI;
+ syncSingleFormUI();
+
  $('#singleSubmitBtn').onclick=async()=>{
   const sid=$('#singleSubject').value,type=$('#singleType').value,question=$('#singleQuestion').value.trim();
   let options=[],correct=parseInt($('#singleCorrect').value);
@@ -3554,7 +3899,6 @@ setTimeout(()=>{const p=new URLSearchParams(location.search),s=p.get('subject');
 })();
 </script>
 
-الباتش التالت
 <style>
 .ov{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
 #forceOverlay{background:rgba(15,23,42,.85)}
@@ -3676,8 +4020,6 @@ renderProfile=async()=>{await _rp2();const u=AppState.user;if(!u||u.role==='gues
  c.innerHTML='<h3 class="mb-2">📡 رادار الأداء</h3>'+rows.map(r=>`<div class="text-sm mt-1">${r.n} <span class="text-muted">${r.v===null?'لم تختبر بعد':r.v+'% ('+r.c+' اختبار)'}</span><div style="height:10px;background:var(--bg-soft);border-radius:9px;overflow:hidden"><div style="height:100%;width:${r.v||0}%;background:${r.v>=75?'var(--success)':r.v>=50?'var(--warning)':'var(--danger)'}"></div></div></div>`).join('')+(d.length?`<p class="text-sm mt-2">💪 نقطة قوتك: <strong>${d[0].n}</strong> — 🎯 تحتاج تركيز: <strong>${d[d.length-1].n}</strong></p>`:'');};
 })();
 </script> 
-
-الباتش التالت
 
 <style>
 .hasLeagues #leagueCard{display:none}
@@ -3804,7 +4146,7 @@ async function patchAdmin3(){
    await Cloud.saveConfig('leagues',L);$('#lgTitle').value='';showToast('تم إنشاء الدوري','success');renderLgAdmin();renderLeagues();};
   $('#adminPanelSite').insertAdjacentHTML('beforeend',`<div style="height:1px;background:var(--border);margin:20px 0"></div><div class="admin-section-title">👻 وضع الشبح (معاينة كطالب)</div><select class="form-control" id="ghSel"></select><button class="btn btn-secondary mt-1" id="ghGo">ابدأ المعاينة</button>`);
   $('#adminPanelStudy').insertAdjacentHTML('beforeend',`<div class="form-row mt-2"><div class="form-group"><label>نشر الملخص من (اختياري)</label><input type="datetime-local" class="form-control" id="notePub"></div><div class="form-group"><label>إخفاؤه في (اختياري)</label><input type="datetime-local" class="form-control" id="noteExp"></div></div>`);
-  $('#singleModel').parentElement.insertAdjacentHTML('afterend',`<div class="form-row"><div class="form-group"><label>نشر السؤال من (اختياري)</label><input type="datetime-local" class="form-control" id="qPub"></div><div class="form-group"><label>إخفاؤه في (اختياري)</label><input type="datetime-local" class="form-control" id="qExp"></div></div>`);
+  $('#singleModelWrap').insertAdjacentHTML('afterend',`<div class="form-row"><div class="form-group"><label>نشر السؤال من (اختياري)</label><input type="datetime-local" class="form-control" id="qPub"></div><div class="form-group"><label>إخفاؤه في (اختياري)</label><input type="datetime-local" class="form-control" id="qExp"></div></div>`);
  }
  $('#lgTab').onclick=()=>{$$('.admin-tab').forEach(x=>x.classList.remove('active'));$('#lgTab').classList.add('active');$$('.admin-panel').forEach(p=>p.classList.remove('active'));$('#adminPanelLeagues').classList.add('active');renderLgAdmin();};
  $('#notesSubmitBtn').onclick=async()=>{
@@ -3823,7 +4165,6 @@ function ghRefresh(){renderUserChip();renderSidebarUser();applyGuestRestrictions
 $('#ghExit').onclick=()=>{AppState.user=G.__real;G.__ghost=false;G.__admin=true;$('#ghBar').classList.add('hidden');ghRefresh();};
 })();
 </script>
-
 
 <style>
 .fr-fire{box-shadow:0 0 0 4px #f97316,0 0 22px #ef4444!important}
@@ -3857,13 +4198,6 @@ startHeartbeat=()=>{if(!AppState.user||AppState.user.role==='guest')return;clear
 updateLiveStudentsCount=async()=>{const el=$('#liveStudentsCount');if(!el)return;
  if(AppState.currentPage==='home'||!el.dataset.n){el.textContent=(await Cloud.getActiveStudentsCount())+' طالب';el.dataset.n=1;}
  if(!G.__lsc){G.__lsc=1;setInterval(updateLiveStudentsCount,18e4);}};
-
-/* الدخول والتسجيل دايماً ببيانات طازة */
-loginUserByPin=async pin=>(await _gu()).find(u=>u.pin===pin)||null;
-const _ru=registerUser;
-registerUser=async(n,b,p)=>{const us=await _gu();
- if(us.some(x=>norm(x.name)===norm(n)))return{ok:false,error:'الاسم ده مسجل بالفعل'};
- tu=0;return _ru(n,b,p);};
 
 /* نافذة عامة + شاشة الجولة */
 document.body.insertAdjacentHTML('beforeend',`
@@ -3899,7 +4233,7 @@ initAdminDashboard=()=>{_ia();if($('#brSend'))return;
   if(firebaseReady)try{await db.collection('notifications').add(n);}catch(e){}
   $('#broadcastMsg').value='';showToast('تم الإرسال لشعبة '+BR[n.branch],'success');};};
 
-/* تغيير الاسم / خروج / حذف الحساب */
+/* تغيير الاسم / خروج */
 async function rename(nn){const u=AppState.user;nn=nn.trim().replace(/\s+/g,' ');
  if(nn.split(' ').length<2)return showToast('اكتب الاسم الثلاثي','warning');
  if(nn===u.name)return showToast('ده نفس اسمك الحالي','warning');
@@ -3913,14 +4247,6 @@ async function rename(nn){const u=AppState.user;nn=nn.trim().replace(/\s+/g,' ')
  renderUserChip();renderSidebarUser();renderProfile();showToast('تم تغيير الاسم','success');}
 function renameUI(){modal('تغيير الاسم',`<div class="form-group"><label>الاسم الجديد (ثلاثي)</label><input class="form-control" id="rnIn" value="${escapeHtml(AppState.user.name)}"></div><p class="form-hint">مسموح مرة كل 30 يوم، ولازم الاسم يكون غير مستخدم.</p><button class="btn btn-primary btn-block mt-2" id="rnGo">حفظ</button>`);$('#rnGo').onclick=()=>rename($('#rnIn').value);}
 function logoutUI(){if(confirm('تسجيل الخروج؟'))logout();}
-function deleteUI(){const u=AppState.user;
- modal('حذف حسابي',`<p style="color:var(--danger);font-weight:700">تحذير: الحذف نهائي ومن غير رجعة. هتخسر كل XP والشارات والمشتريات ونتايجك في لوحة الشرف والدوري.</p><div class="form-group mt-2"><label>اسمك زي ما سجلته</label><input class="form-control" id="dlN"></div><div class="form-group"><label>شعبتك</label><select class="form-control" id="dlB"><option value="">اختر</option>${Object.entries(BR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="form-group"><label>الكود السري</label><input type="password" class="form-control" id="dlP" inputmode="numeric" maxlength="6"></div><button class="btn btn-danger btn-block" id="dlGo">حذف حسابي نهائياً</button>`);
- $('#dlGo').onclick=async()=>{
-  if(norm($('#dlN').value)!==norm(u.name)||$('#dlB').value!==u.branch||$('#dlP').value!==u.pin)return showToast('البيانات غير مطابقة','error');
-  if(!confirm('آخر تأكيد: حذف الحساب نهائياً؟'))return;
-  if(firebaseReady)try{const q=await db.collection('scores').where('userName','==',u.name).get(),b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit();await db.collection('heartbeats').doc(u.id).delete();}catch(e){}
-  Store.set('scores',Store.get('scores',[]).filter(s=>s.userName!==u.name));
-  await Cloud.deleteUser(u.id);Store.remove('session');location.reload();};}
 $('#sidebarLeaderMsg').insertAdjacentHTML('afterend','<hr class="sidebar-divider"><a class="sidebar-link" id="sbName">تغيير الاسم</a><a class="sidebar-link" id="sbOut">تسجيل الخروج</a><a class="sidebar-link" id="sbInst">ثبّت التطبيق</a>');
 $('#sbName').onclick=()=>{closeSidebar();if(!isStu())return showToast('للطلاب المسجلين فقط','warning');renameUI();};
 $('#sbOut').onclick=()=>{closeSidebar();logoutUI();};
@@ -3975,7 +4301,7 @@ renderProfile=async()=>{await _rp();const u=AppState.user;if(!u||u.role==='guest
  if(u.bg&&$('.idcard'))$('.idcard').style.background=u.bg;
  let c=$('#acctCard');if(!c){c=document.createElement('div');c.id='acctCard';c.className='card mt-3';$('#profileStats').after(c);}
  c.innerHTML='<h3 class="mb-2">حسابي</h3><div class="flex gap-1 wrap"><button class="btn btn-ghost btn-sm" id="acRn">تغيير الاسم</button><button class="btn btn-ghost btn-sm" id="acOut">تسجيل الخروج</button><button class="btn btn-danger btn-sm" id="acDel">حذف حسابي</button></div>';
- $('#acRn').onclick=renameUI;$('#acOut').onclick=logoutUI;$('#acDel').onclick=deleteUI;};
+ $('#acRn').onclick=renameUI;$('#acOut').onclick=logoutUI;};
 
 /* جولة للطلاب الجدد + تقرير أسبوعي */
 const TS=[['📚','المذاكرة','ملخصات وبطاقات استذكار لكل مادة، وكمّل من آخر نقطة.'],['📝','الامتحانات','اختبر نفسك بأنماط مختلفة وشوف ترتيبك بين الدفعة.'],['⚔️','التنافس','مبارزات ودوريات بين الشعب وتحدي البقاء.'],['🛒','المتجر','اجمع XP واشتري إطارات وألقاب لبطاقتك.']];
@@ -4000,10 +4326,414 @@ const _nt=navigateTo;navigateTo=p=>{_nt(p);if(p==='home')week();};
 })();
 </script>
 
+<style>#pendOv{z-index:475}#mtBanner{position:fixed;top:0;left:0;right:0;z-index:480;background:#f59e0b;color:#1a1a1a;text-align:center;padding:6px;font-weight:700;font-size:.85rem}</style>
+<script>
+(()=>{
+const G=window,LEADER_UID="AgbmVm9wPcQhDgKV30nVIAcr4j22",auth=firebase.auth();
+const norm=s=>String(s||'').replace(/\s+/g,' ').trim(),mail=i=>i+'@mcihub.com';
+const BAD=['ادمن','أدمن','ليدر','مشرف','دكتور','admin','leader'];
+const RX={id:/^(24|25|26)\d{4}$/,name:/^[\u0621-\u064Aa-zA-Z]+( [\u0621-\u064Aa-zA-Z]+){2,}$/,ph:/^01[0125]\d{8}$/,pw:/^(?=.*[A-Za-z\u0621-\u064A])(?=.*\d).{8,}$/};
+const isLeader=()=>!!AppState.user?.isLeader&&auth.currentUser?.uid===LEADER_UID;
+const logSec=async(type,d)=>{try{await db.collection('security_logs').add({type,detail:String(d).slice(0,200),at:Date.now()});}catch(e){}};
+const checkName=n=>{n=norm(n);if(n.length>30||!RX.name.test(n))return 'الاسم الثلاثي حروف فقط (3 مقاطع، حتى 30 حرف)';
+ return BAD.some(b=>n.toLowerCase().includes(b))?'الاسم يحتوي لفظاً غير مسموح':'';};
+const ready=new Promise(r=>{const u=auth.onAuthStateChanged(()=>{u();r();});});
+const fresh=async id=>(await db.collection('users').doc(id).get()).data();
 
+document.body.insertAdjacentHTML('beforeend',`
+<div class="ov hidden" id="pendOv"><div class="card" style="max-width:420px"><div style="font-size:3rem">⏳</div><h3 id="pendTxt" class="mt-1"></h3><div class="flex gap-1 mt-2" style="justify-content:center"><button class="btn btn-primary btn-sm" onclick="location.reload()">تحديث</button><button class="btn btn-ghost btn-sm" id="pendOut">خروج</button></div></div></div>`);
 
+/* ربط معالج تحديث الحسابات القديمة ذو الـ 3 مراحل (6s -> 6s -> 16s -> كارت ترحيب 4s) */
+$('#migStep3Btn').onclick = async () => {
+  const newName = norm($('#migNewName')?.value || '');
+  const studentId = ($('#migStudentId')?.value || '').trim();
+  const newPass = $('#migNewPass')?.value || '';
+  const errEl = $('#migStep3Err');
+  if (errEl) errEl.classList.remove('show');
 
+  if (!_migTargetUser) { openMigrationWizard(); return; }
+  const ne = checkName(newName);
+  if (ne) { if (errEl) { errEl.textContent = ne; errEl.classList.add('show'); } return; }
+  if (!RX.id.test(studentId)) {
+    if (errEl) { errEl.textContent = 'الكود الجامعي 6 أرقام يبدأ بـ 24 أو 25 أو 26'; errEl.classList.add('show'); }
+    return;
+  }
+  if (!RX.pw.test(newPass)) {
+    if (errEl) { errEl.textContent = 'الباسورد الجديد 8 خانات على الأقل حروف وأرقام'; errEl.classList.add('show'); }
+    return;
+  }
 
+  $('#migStep3Btn').disabled = true;
+  try {
+    const oldDoc = (await fresh(_migTargetUser.id)) || _migTargetUser;
+    if (studentId !== _migTargetUser.id && (await db.collection('users').doc(studentId).get()).exists) {
+      $('#migStep3Btn').disabled = false;
+      logSec('dup_migration', studentId);
+      if (errEl) { errEl.textContent = 'الكود الجامعي ده مسجل لحساب تاني بالفعل'; errEl.classList.add('show'); }
+      return;
+    }
 
+    const loadingTask = runTimedLoading(
+      16,
+      'جاري إنشاء حسابك المؤمّن ونقل نقاطك...',
+      `يتم الآن نقل ${oldDoc.xp || 0} XP وسجل امتحاناتك بالكامل`
+    );
+
+    const cred = await auth.createUserWithEmailAndPassword(mail(studentId), newPass);
+    const { pin, ...rest } = oldDoc;
+    const upgradedUser = {
+      ...rest,
+      id: studentId,
+      studentId,
+      name: newName,
+      phone: _migPhoneVal,
+      authUid: cred.user.uid,
+      status: 'approved',
+      role: oldDoc.role || 'student',
+      xp: oldDoc.xp || 0,
+      wrongQuestions: oldDoc.wrongQuestions || [],
+      migratedFrom: _migTargetUser.id,
+      createdAt: oldDoc.createdAt || Date.now()
+    };
+
+    const batch = db.batch();
+    batch.set(db.collection('users').doc(studentId), upgradedUser);
+    if (studentId !== _migTargetUser.id) {
+      batch.delete(db.collection('users').doc(_migTargetUser.id));
+    }
+    await batch.commit();
+    await loadingTask;
+
+    $('#migStep3Btn').disabled = false;
+    closeModal('migrateModal');
+    setSession(upgradedUser);
+
+    const firstName = upgradedUser.name.split(/\s+/)[0] || upgradedUser.name;
+    if ($('#wbTitle')) $('#wbTitle').textContent = `أهلاً بيك يا ${firstName} في النسخة الجديدة!`;
+    if ($('#wbSub')) $('#wbSub').textContent = 'تم تأمين حسابك ونقل كل نقاطك وسجل امتحاناتك بنجاح';
+    if ($('#wbXpBadge')) $('#wbXpBadge').textContent = `${upgradedUser.xp || 0} XP`;
+    openModal('welcomeBackModal');
+    setTimeout(() => closeModal('welcomeBackModal'), 4000);
+  } catch (e) {
+    $('#migStep3Btn').disabled = false;
+    $('#loadingOverlay')?.classList.remove('active');
+    const msg = e && e.code === 'auth/email-already-in-use' ? 'الكود الجامعي ده مستخدم بحساب تاني' : 'تعذر تحديث الحساب، تأكد من الاتصال وحاول تاني';
+    if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); }
+  }
+};
+
+const _al=afterLogin;
+afterLogin=async()=>{await ready;const u=AppState.user;
+ if(!u||u.role==='guest')return _al();
+ if(u.isLeader){if(auth.currentUser?.uid!==LEADER_UID){Store.remove('session');return location.reload();}G.__admin=true;return _al();}
+ if(!u.authUid)return openMigrationWizard(u.pin || '');
+ if(auth.currentUser?.uid!==u.authUid){Store.remove('session');return location.reload();}
+ const d=await fresh(u.id);
+ if(!d||d.status==='banned'||d.banned)return showPend('تم رفض أو حظر حسابك. تواصل مع ليدر الدفعة.');
+ if(d.status!=='approved')return showPend('حسابك قيد المراجعة من قِبل ليدر الدفعة');
+ AppState.user={...d,id:u.id};Store.set('session',AppState.user);return _al();};
+function showPend(t){$('#pendTxt').textContent=t;$('#pendOv').classList.remove('hidden');}
+const _lo=logout;logout=async()=>{try{await auth.signOut();}catch(e){}_lo();};
+const _su=Cloud.saveUser;Cloud.saveUser=async u=>{if(u?.isLeader)return;return _su(u);};
+
+const _gu=Cloud.getUsers;Cloud.getUsers=async()=>{const a=await _gu();return G.__lb?a.filter(u=>u.status==='approved'):a;};
+const _rl=renderLeaderboard;renderLeaderboard=async()=>{G.__lb=1;try{await _rl();}finally{G.__lb=0;}};
+
+const _rp=renderProfile;
+renderProfile=async()=>{await _rp();const b=$('#acDel');if(b)b.onclick=delAcc;};
+function delAcc(){const u=AppState.user;if(u.isLeader)return;
+ $('#shareCardBody').innerHTML=`<p style="color:var(--danger);font-weight:700">الحذف نهائي ومن غير رجعة.</p><input class="form-control mt-1" id="dN" placeholder="اسمك زي ما سجلته"><select class="form-control mt-1" id="dB"><option value="">الشعبة</option><option value="MIS">نظم معلومات</option><option value="Marketing">تسويق</option><option value="Accounting">محاسبة</option></select><input type="password" class="form-control mt-1" id="dP" placeholder="الباسورد"><button class="btn btn-danger btn-block mt-2" id="dGo">حذف حسابي نهائياً</button>`;
+ openModal('shareCardModal');
+ $('#dGo').onclick=async()=>{
+  if(norm($('#dN').value).toLowerCase()!==norm(u.name).toLowerCase()||$('#dB').value!==u.branch)return showToast('البيانات غير مطابقة','error');
+  try{await auth.currentUser.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(mail(u.id),$('#dP').value));}catch(e){return showToast('الباسورد غير صحيح','error');}
+  if(!confirm('آخر تأكيد: حذف الحساب نهائياً؟'))return;
+  const q=await db.collection('scores').where('userName','==',u.name).get(),b=db.batch();
+  q.docs.forEach(d=>b.delete(d.ref));b.delete(db.collection('users').doc(u.id));await b.commit();
+  await auth.currentUser.delete();Store.remove('session');location.reload();};}
+
+const _ia=initAdminDashboard;
+initAdminDashboard=()=>{if(!isLeader()){closeModal('adminDashboardModal');return;}_ia();G.__admin=true;patchPend();};
+function openLeader(){if(!isLeader()){logSec('leader_room_denied',AppState.user?.name||'visitor');return showToast('غير مصرح','error');}
+ closeModal('adminLoginModal');openModal('adminDashboardModal');initAdminDashboard();}
+async function renderPend(){
+ const q=await db.collection('users').where('status','==','pending').get(),L=q.docs.map(d=>d.data());
+ $('#pendList').innerHTML=L.length?L.map(u=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(u.name)}</div><div class="qb-meta"><span class="badge badge-primary">${escapeHtml(u.studentId||u.id)}</span><span class="badge badge-warning">${escapeHtml(u.phone||'')}</span><span class="badge badge-success">${escapeHtml(u.branch||'')}</span></div><div class="qb-actions"><button class="btn btn-success btn-xs" data-ok="${u.id}">قبول ✅</button><button class="btn btn-danger btn-xs" data-no="${u.id}">حظر/رفض 🚫</button></div></div>`).join(''):'<p class="text-muted">لا توجد طلبات</p>';
+ const set=async(id,d)=>{await db.collection('users').doc(id).update(d);renderPend();};
+ $$('#pendList [data-ok]').forEach(b=>b.onclick=()=>set(b.dataset.ok,{status:'approved'}));
+ $$('#pendList [data-no]').forEach(b=>b.onclick=()=>set(b.dataset.no,{status:'banned',banned:true}));}
+function patchPend(){
+ if(!$('#pendTab')){$('.admin-tabs').insertAdjacentHTML('beforeend','<div class="admin-tab" id="pendTab" data-atab="pending">طلبات الانضمام</div>');
+  $('#adminPanelReports').insertAdjacentHTML('afterend','<div class="admin-panel" id="adminPanelPending"><div class="admin-section-title">طلبات الانضمام الجديدة</div><div id="pendList"></div></div>');}
+ $('#pendTab').onclick=()=>{$$('.admin-tab').forEach(x=>x.classList.remove('active'));$('#pendTab').classList.add('active');
+  $$('.admin-panel').forEach(p=>p.classList.remove('active'));$('#adminPanelPending').classList.add('active');renderPend();};}
+
+document.addEventListener('DOMContentLoaded',()=>{
+ $('#pendOut').onclick=()=>logout();
+ $('#mtAdminBtn').onclick=()=>openModal(isLeader()?'adminLoginModal':'loginModal');
+ $('#adminLoginModal .modal-body').innerHTML='<p>غرفة الليدر لحساب الليدر الموثّق فقط.</p><button class="btn btn-primary btn-block mt-2" id="adminLoginBtn">فتح الغرفة</button>';
+ $('#adminLoginBtn').onclick=openLeader;
+ let clk=0,ct;$('#secretTrigger').onclick=()=>{clk++;clearTimeout(ct);ct=setTimeout(()=>clk=0,2000);if(clk>=5){clk=0;openLeader();}};
+ $('#registerModal .modal-body').innerHTML=`<div class="form-group"><label>الكود الجامعي (6 أرقام)</label><input class="form-control" id="regId" inputmode="numeric" maxlength="6"></div><div class="form-group"><label>الاسم الثلاثي</label><input class="form-control" id="regName" maxlength="30"></div><div class="form-group"><label>رقم الموبايل</label><input class="form-control" id="regPhone" inputmode="numeric" maxlength="11" placeholder="01xxxxxxxxx"></div><div class="form-group"><label>الشعبة</label><select class="form-control" id="regBranch"><option value="">اختر الشعبة</option><option value="MIS">نظم معلومات (MIS)</option><option value="Marketing">تسويق (Marketing)</option><option value="Accounting">محاسبة (Accounting)</option></select></div><div class="form-group"><label>الباسورد (8 خانات حروف وأرقام)</label><input type="password" class="form-control" id="regPass"><div class="form-error" id="regPinErr"></div></div><button class="btn btn-primary btn-block mt-2" id="registerSubmitBtn">إنشاء الحساب</button>`;
+ $('#registerSubmitBtn').onclick=async()=>{
+  const g=i=>$('#'+i).value,id=g('regId').trim(),nm=norm(g('regName')),ph=g('regPhone').trim(),pw=g('regPass'),br=g('regBranch'),er=$('#regPinErr');
+  const fail=(m,t)=>{er.textContent=m;er.classList.add('show');if(t)logSec(t,id+' | '+nm);};er.classList.remove('show');
+  if(!RX.id.test(id))return fail('الكود الجامعي 6 أرقام يبدأ بـ 24 أو 25 أو 26','invalid_code');
+  const ne=checkName(nm);if(ne)return fail(ne,'bad_name');
+  if(!RX.ph.test(ph))return fail('رقم الموبايل 11 رقم مصري بدون +');
+  if(!RX.pw.test(pw))return fail('الباسورد 8 خانات على الأقل حروف وأرقام');
+  if(!br)return fail('اختر الشعبة');
+  if(Date.now()-Store.get('lastReg',0)<864e5)return fail('مسموح بحساب واحد لكل جهاز كل 24 ساعة','device_repeat');
+  try{if((await Cloud.getUsers()).some(u=>norm(u.name).toLowerCase()===nm.toLowerCase()))return fail('الاسم ده مسجل بالفعل');}catch(e){}
+  try{const c=await auth.createUserWithEmailAndPassword(mail(id),pw),u={id,studentId:id,name:nm,phone:ph,branch:br,authUid:c.user.uid,status:'pending',role:'student',xp:0,wrongQuestions:[],createdAt:Date.now()};
+   await db.collection('users').doc(id).set(u);Store.set('lastReg',Date.now());closeModal('registerModal');setSession(u);
+  }catch(e){fail(e.code==='auth/email-already-in-use'?'الكود الجامعي ده مسجل بالفعل':'تعذر إنشاء الحساب، حاول تاني');}};
+ $('#loginModal .modal-body').innerHTML=`<div class="form-group"><label>الكود الجامعي</label><input class="form-control" id="loginId" inputmode="numeric" maxlength="6"></div><div class="form-group"><label>الباسورد</label><input type="password" class="form-control" id="loginPass"><div class="form-error" id="loginPinErr"></div></div><button class="btn btn-primary btn-block mt-2" id="loginSubmitBtn">دخول</button><button class="btn btn-ghost btn-block mt-1" id="openMigFromLogin">حساب قديم؟ حدّث بياناتك من هنا</button>`;
+ $('#openMigFromLogin').onclick=()=>{closeModal('loginModal');openMigrationWizard();};
+ $('#loginSubmitBtn').onclick=async()=>{
+  const id=$('#loginId').value.trim(),pw=$('#loginPass').value,er=$('#loginPinErr'),bad=m=>{er.textContent=m;er.classList.add('show');};er.classList.remove('show');
+  // التحقق لو كتب الكود القديم في خانة الدخول
+  const allUsers = await Cloud.getUsers();
+  const legacyMatch = allUsers.find(u => u.pin === id && !u.authUid);
+  if (legacyMatch) {
+    closeModal('loginModal');
+    openMigrationWizard(id);
+    return;
+  }
+  if(id!=='172839'&&!RX.id.test(id)){logSec('invalid_code',id);return bad('الكود الجامعي غير صالح');}
+  try{const c=await auth.signInWithEmailAndPassword(mail(id),pw);closeModal('loginModal');
+   if(c.user.uid===LEADER_UID){G.__admin=true;const ld=(await fresh(id))||{};return setSession({xp:0,wrongQuestions:[],branch:'Marketing',...ld,id,name:ld.name||'صلاح أشرف',role:'student',status:'approved',authUid:LEADER_UID,isLeader:true});}
+   const d=await fresh(id);if(!d){await auth.signOut();return bad('الحساب غير موجود');}
+   setSession({...d,id});
+  }catch(e){bad('الكود أو الباسورد غير صحيح');}};
+});
+})();
+</script>
+<script>
+(()=>{
+const G=window,LEADER_UID="AgbmVm9wPcQhDgKV30nVIAcr4j22";
+const isL=()=>!!AppState.user?.isLeader&&firebase.auth().currentUser?.uid===LEADER_UID;
+const BR={MIS:'نظم معلومات',Marketing:'تسويق',Accounting:'محاسبة'},SIDS=Object.keys(APP_DATA.subjects);
+const SL={leader_room_denied:'محاولة دخول غرفة الليدر',invalid_code:'كود جامعي غير صالح',bad_name:'اسم مخالف',device_repeat:'تكرار تسجيل من نفس الجهاز',dup_migration:'كود مكرر عند التوثيق'};
+document.body.insertAdjacentHTML('beforeend','<div class="hidden" id="mtBanner">⚠️ وضع الصيانة مُفعّل حالياً للطلاب</div>');
+
+const _gc=Cloud.getConfig;
+Cloud.getConfig=async(k,f)=>{const v=await _gc(k,f);
+ if(k==='activePoll'&&v){const t=Math.max(v.resetAt||0,v.createdAt||0);if(t&&Store.get('pollSeen',0)<t){Store.remove('pollVote');Store.set('pollSeen',t);}}
+ return v;};
+async function pShow(){const p=await Cloud.getConfig('activePoll',null),t=p?p.votes.reduce((a,b)=>a+b,0):0;
+ $('#pollAdminResult').innerHTML=p?`<h4 class="mb-2">${escapeHtml(p.question)}</h4>`+p.options.map((o,i)=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(o)}</div><div class="qb-meta"><span class="badge badge-primary">${p.votes[i]} صوت</span><span class="badge badge-success">${t?Math.round(p.votes[i]/t*100):0}%</span></div></div>`).join(''):'<p class="text-muted">لا يوجد تصويت نشط</p>';}
+
+const _ss=Cloud.saveScore;
+Cloud.saveScore=async s=>{if(G.__mt&&!isL()){showToast('المنصة في وضع الصيانة: لم تُسجَّل الدرجة','warning');return;}return _ss(s);};
+const _sc=Cloud.saveConfig;
+Cloud.saveConfig=async(k,v)=>{if(G.__mt&&!isL()&&k==='activePoll'){showToast('التصويت متوقف أثناء الصيانة','warning');return;}return _sc(k,v);};
+async function mt(){G.__mt=!!(await Cloud.getConfig('maintenance',false));$('#mtBanner').classList.toggle('hidden',!(G.__mt&&isL()));}
+setTimeout(mt,1500);setInterval(mt,30000);
+const mo=$('#mtOverlay');
+if(mo)new MutationObserver(async()=>{if(mo.classList.contains('hidden'))return;
+ const m=await Cloud.getConfig('maintMsg',''),p=mo.querySelector('p');if(p)p.textContent=m||'جاري تنفيذ تحديثات.. هنرجع قريب جداً';}).observe(mo,{attributes:true,attributeFilter:['class']});
+
+let qr=null,useLocal=false,first=true;
+function qstart(){return qr||(qr=new Promise(res=>{
+ db.collection('config').doc('questionsVersion').onSnapshot(async d=>{
+  const v=d.exists?(d.data().value||0):0;
+  if(Store.get('qv',null)!==v||!SIDS.every(s=>Store.get('questions_'+s,null)!==null)){
+   try{for(const s of SIDS){const x=await db.collection('questions').doc(s).get();Store.set('questions_'+s,x.exists?(x.data().list||[]):[]);}Store.set('qv',v);}catch(e){}
+   if(!first){if(!AppState.activeExam&&!AppState.activeDuel){showToast('تم تحديث الأسئلة، جاري إعادة التحميل','info');setTimeout(()=>location.reload(),1500);}
+    else showToast('تم تحديث الأسئلة وهتظهر بعد إنهاء الامتحان','info');}
+  }
+  useLocal=true;first=false;res();
+ },()=>{useLocal=false;res();});}));}
+const _g6=Cloud.getQuestions;
+Cloud.getQuestions=async s=>{
+ if(isL()||G.__admin||!firebaseReady)return _g6(s);
+ await qstart();if(!useLocal)return _g6(s);
+ const f=firebaseReady;firebaseReady=false;let p;
+ try{p=_g6(s);}finally{firebaseReady=f;}
+ return p;};
+Cloud.watchQuestions=()=>{};
+const _sq6=Cloud.saveQuestions;
+Cloud.saveQuestions=async(sid,arr)=>{const r=await _sq6(sid,arr);
+ if(isL()&&firebaseReady)try{const x=await db.collection('config').doc('questionsVersion').get();
+  await Cloud.saveConfig('questionsVersion',(x.exists?(x.data().value||0):0)+1);}catch(e){}
+ return r;};
+
+async function rNotifs(){
+ let L=[];try{const q=await db.collection('notifications').orderBy('createdAt','desc').limit(100).get();L=q.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+ $('#nfList').innerHTML=L.length?L.map(n=>`<div class="qbank-item"><div class="qb-q">${escapeHtml(n.msg)}</div><div class="qb-meta"><span class="text-xs">${new Date(n.createdAt||n.date).toLocaleString('ar-EG')}</span>${n.branch?`<span class="badge badge-warning">${BR[n.branch]||''}</span>`:''}</div><div class="qb-actions"><button class="btn btn-danger btn-xs" data-n="${n.id}">حذف</button></div></div>`).join(''):'<p class="text-muted">لا توجد إشعارات</p>';
+ $$('#nfList [data-n]').forEach(b=>b.onclick=async()=>{await db.collection('notifications').doc(b.dataset.n).delete();rNotifs();});}
+async function delAllNotifs(){
+ if(!confirm('حذف جميع الإشعارات نهائياً؟'))return;
+ for(;;){const q=await db.collection('notifications').limit(400).get();if(q.empty)break;const b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit();}
+ Store.set('notifications',[]);updateNotifBadge();rNotifs();showToast('تم حذف جميع الإشعارات','success');}
+async function rLog(){
+ let L=[];try{const q=await db.collection('security_logs').orderBy('at','desc').limit(100).get();L=q.docs.map(d=>d.data());}catch(e){}
+ $('#slList').innerHTML=L.length?L.map(x=>`<div class="qbank-item"><div class="qb-q">${SL[x.type]||escapeHtml(x.type)}</div><div class="qb-meta">${escapeHtml(x.detail||'')}</div><div class="qb-meta"><span class="text-xs">${new Date(x.at).toLocaleString('ar-EG')}</span></div></div>`).join(''):'<p class="text-muted">السجل فاضي</p>';}
+function tab(id,label,html,render){
+ if(!$('#'+id+'Tab')){
+  $('.admin-tabs').insertAdjacentHTML('beforeend',`<div class="admin-tab" id="${id}Tab" data-atab="${id}">${label}</div>`);
+  $('#adminPanelReports').insertAdjacentHTML('afterend',`<div class="admin-panel" id="adminPanel_${id}">${html}</div>`);}
+ $('#'+id+'Tab').onclick=()=>{$$('.admin-tab').forEach(x=>x.classList.remove('active'));$('#'+id+'Tab').classList.add('active');
+  $$('.admin-panel').forEach(p=>p.classList.remove('active'));$('#adminPanel_'+id).classList.add('active');render();};}
+
+const _ia=initAdminDashboard;
+initAdminDashboard=()=>{_ia();if(!isL())return;patch();};
+function patch(){
+ if(!$('#pollZeroBtn')){$('#pollResetBtn').insertAdjacentHTML('beforebegin','<button class="btn btn-secondary" id="pollZeroBtn">تصفير الأصوات</button> ');$('#pollResetBtn').textContent='حذف التصويت نهائياً';}
+ $('#pollZeroBtn').onclick=async()=>{const p=await Cloud.getConfig('activePoll',null);if(!p)return showToast('لا يوجد تصويت','warning');
+  if(!confirm('تصفير كل الأصوات؟'))return;p.votes=p.options.map(()=>0);p.resetAt=Date.now();
+  await Cloud.saveConfig('activePoll',p);renderPoll();pShow();showToast('تم تصفير الأصوات','success');};
+ pShow();
+ if(!$('#mtMsg')&&$('#mtSwitch')){
+  $('#mtSwitch').closest('label').insertAdjacentHTML('afterend','<div class="form-group mt-1"><label>رسالة تظهر للطلاب في شاشة الصيانة</label><textarea class="form-control" id="mtMsg" rows="2"></textarea></div><button class="btn btn-secondary btn-sm" id="mtMsgBtn">حفظ الرسالة</button>');
+  $('#mtMsgBtn').onclick=async()=>{await Cloud.saveConfig('maintMsg',$('#mtMsg').value.trim());showToast('تم حفظ رسالة الصيانة','success');};
+  $('#mtSwitch').addEventListener('change',()=>setTimeout(mt,800));}
+ if($('#mtMsg'))Cloud.getConfig('maintMsg','').then(v=>{if($('#mtMsg'))$('#mtMsg').value=v||'';});
+ tab('notifs','الإشعارات','<div class="admin-section-title">إدارة الإشعارات</div><button class="btn btn-danger btn-sm mb-2" id="nfAll">حذف جميع الإشعارات 🧹</button><div id="nfList"></div>',rNotifs);
+ tab('seclog','سجل المراقبة','<div class="admin-section-title">سجل المراقبة الأمني</div><button class="btn btn-ghost btn-sm mb-2" id="slRef">تحديث</button><div id="slList"></div>',rLog);
+ $('#nfAll').onclick=delAllNotifs;$('#slRef').onclick=rLog;
+}
+})();
+</script>
+<script>
+(()=>{
+const G = window;
+
+/* 1. إصلاح لخبطة الاختيارات في إعادة الأخطاء والامتحانات */
+const _startExamOrig = startExam;
+startExam = async (sid, mode, opts={}) => {
+  await _startExamOrig(sid, mode, opts);
+  if (AppState.activeExam && AppState.activeExam.questions) {
+    AppState.activeExam.questions.forEach(q => {
+      if (!q._rawOptions && q._origOptions) {
+        q._rawOptions = [...q._origOptions];
+        q._rawCorrect = q._origOptions.indexOf(q.options[q.correct]);
+      }
+    });
+    Store.set('activeExam', AppState.activeExam);
+  }
+};
+
+retryWrong = function(r) {
+  const wrong = r.questions.filter(q => q._userAnswer !== q.correct);
+  if (!wrong.length) return showToast('لا توجد أخطاء!', 'success');
+  const s = {
+    id: uid(), subjectId: r.subjectId, mode: 'custom',
+    questions: wrong.map(q => {
+      const baseOpts = q._rawOptions || q._origOptions || q.options;
+      const baseCorr = q._rawCorrect !== undefined ? q._rawCorrect : (q._origOptions ? q._origOptions.indexOf(q.options[q.correct]) : q.correct);
+      const shuffledOpts = baseOpts ? shuffle([...baseOpts]) : baseOpts;
+      const newCorr = (q.type !== 'tf' && shuffledOpts && baseOpts) ? shuffledOpts.indexOf(baseOpts[baseCorr]) : baseCorr;
+      return {
+        ...q,
+        options: shuffledOpts,
+        _origOptions: baseOpts,
+        _rawOptions: baseOpts,
+        _rawCorrect: baseCorr,
+        correct: newCorr,
+        _userAnswer: null,
+        _flagged: false
+      };
+    }),
+    currentIdx: 0, startTime: Date.now(), durationMs: Math.max(5, wrong.length) * 60000, tabSwitches: 0
+  };
+  AppState.activeExam = s;
+  Store.set('activeExam', s);
+  closeModal('examResultModal');
+  launchExamRunner();
+};
+
+/* 2. إضافة تاب للأسئلة المقالية داخل صفحة تفاصيل المادة */
+const _openSubjOrig = openSubjectPage;
+openSubjectPage = async (sid, noteIdx) => {
+  await _openSubjOrig(sid, noteIdx);
+  const tabs = $('#detailTabs');
+  const flashPanel = $('#detailFlashcardsPanel');
+  if (!tabs || !flashPanel) return;
+
+  if (!tabs.querySelector('[data-dtab="essay"]')) {
+    tabs.insertAdjacentHTML('beforeend', '<div class="tab" data-dtab="essay">أسئلة مقالية</div>');
+  }
+  let essayPanel = $('#detailEssayPanel');
+  if (!essayPanel) {
+    flashPanel.insertAdjacentHTML('afterend', '<div id="detailEssayPanel" style="display:none"></div>');
+    essayPanel = $('#detailEssayPanel');
+  }
+
+  let allRaw = [];
+  if (firebaseReady) {
+    try {
+      const doc = await db.collection('questions').doc(sid).get();
+      allRaw = doc.exists ? (doc.data().list || []) : Store.get('questions_' + sid, []);
+    } catch(e) { allRaw = Store.get('questions_' + sid, []); }
+  } else {
+    allRaw = Store.get('questions_' + sid, []);
+  }
+
+  const essays = allRaw.filter(q => q.type === 'essay');
+  if (!essays.length) {
+    essayPanel.innerHTML = emptyState('لا توجد أسئلة مقالية', 'لم يتم إضافة أسئلة مقالية لهذه المادة بعد');
+  } else {
+    essayPanel.innerHTML = essays.map((q, i) => `
+      <div class="card mb-2">
+        <div style="font-weight:700;margin-bottom:8px">${i + 1}. ${escapeHtml(q.question)}</div>
+        <button class="btn btn-ghost btn-xs essay-toggle">إظهار الإجابة النموذجية</button>
+        <div class="essay-ans hidden mt-2" style="padding:10px;background:var(--bg-soft);border-radius:8px;border-right:3px solid var(--success)">
+          <div style="white-space:pre-wrap">${escapeHtml(q.modelAnswer || 'لا توجد إجابة مسجلة')}</div>
+          ${q.explanation ? `<div class="text-xs text-muted mt-1">${escapeHtml(q.explanation)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+    $$('.essay-toggle', essayPanel).forEach(btn => {
+      btn.onclick = () => {
+        const box = btn.nextElementSibling;
+        const hidden = box.classList.toggle('hidden');
+        btn.textContent = hidden ? 'إظهار الإجابة النموذجية' : 'إخفاء الإجابة';
+      };
+    });
+  }
+};
+
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('#detailTabs .tab');
+  if (!tab) return;
+  const ep = $('#detailEssayPanel');
+  if (ep) ep.style.display = tab.dataset.dtab === 'essay' ? 'block' : 'none';
+});
+
+/* 3. سد ثغرة تغيير الاسم ومنع الألفاظ المحظورة والرموز */
+const BAD_WORDS = ['ادمن','أدمن','ليدر','مشرف','دكتور','admin','leader'];
+const NAME_RX = /^[\u0621-\u064Aa-zA-Z]+( [\u0621-\u064Aa-zA-Z]+){2,}$/;
+const _origRnBtn = () => {
+  const btn = $('#rnGo');
+  if (!btn || btn.dataset.secured) return;
+  btn.dataset.secured = '1';
+  const oldClick = btn.onclick;
+  btn.onclick = async () => {
+    const val = String($('#rnIn')?.value || '').replace(/\s+/g, ' ').trim();
+    if (val.length > 30 || !NAME_RX.test(val)) {
+      return showToast('الاسم الثلاثي حروف فقط (3 مقاطع، حتى 30 حرف)', 'warning');
+    }
+    if (BAD_WORDS.some(w => val.toLowerCase().includes(w))) {
+      return showToast('الاسم يحتوي لفظاً غير مسموح', 'error');
+    }
+    if (oldClick) await oldClick();
+  };
+};
+new MutationObserver(_origRnBtn).observe(document.body, { childList: true, subtree: true });
+
+/* 4. تصفير التصويت لحظياً للطلاب المتصلين دون Refresh */
+const _renderPollOrig = renderPoll;
+renderPoll = async () => {
+  const poll = await Cloud.getConfig('activePoll', null);
+  if (poll && poll.resetAt && Store.get('pollSeen', 0) < poll.resetAt) {
+    Store.remove('pollVote');
+    Store.set('pollSeen', poll.resetAt);
+  }
+  await _renderPollOrig();
+};
+})();
+</script>
 </body>
 </html>
