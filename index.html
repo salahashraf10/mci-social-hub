@@ -3330,8 +3330,11 @@ function initAuthHandlers() {
 }
 
 let secretClicks = 0, secretTimer = null;
-function initSecretAdmin() {
+ function initSecretAdmin() {
   $('#secretTrigger').onclick = () => {
+    // قفل الأمان: تجاهل أي ضغطة لو اللي فاتح مش حساب الليدر الموثّق
+    if (!firebase.auth().currentUser || firebase.auth().currentUser.uid !== LEADER_UID) return;
+
     secretClicks++;
     clearTimeout(secretTimer);
     secretTimer = setTimeout(() => secretClicks = 0, 2000);
@@ -3340,6 +3343,8 @@ function initSecretAdmin() {
 }
 
 function initAdminDashboard() {
+ 
+ 
   $$('.admin-tab').forEach(t => t.onclick = () => {
     $$('.admin-tab').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
