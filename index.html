@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <style>
 :root {
   --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "MiSans", "IBM Plex Sans Arabic", "Cairo", sans-serif;
@@ -1274,6 +1274,12 @@ let db = null, auth = null, firebaseReady = false;
 try {
   if (typeof firebase !== 'undefined') {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+   if (firebase.appCheck) {
+  firebase.appCheck().activate(
+    new firebase.appCheck.ReCaptchaEnterpriseProvider('6LehMSouAAAAADTzSLBLSTFHy0-XkGceR3oZCrc_'),
+    true
+  );
+}
     db = firebase.firestore();
     if (firebase.auth) auth = firebase.auth();
     firebaseReady = true;
