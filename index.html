@@ -4790,5 +4790,158 @@ renderPoll = async () => {
 };
 })();
 </script>
-</body>
+ <script>
+(()=>{
+const G = window, LEADER_UID = "AaK0UBxfi1VYD56BjSy2ZscWexn1";
+const isL = () => !!AppState.user?.isLeader && firebase.auth().currentUser?.uid === LEADER_UID;
+
+// 1. اعتراض أي حفظ في users وفصل رقم الموبايل للمخزن السري user_secrets
+const _origSaveUser = Cloud.saveUser;
+Cloud.saveUser = async (u) => {
+  if (!u || G.__ghost) return;
+  const { phone, ...safeUser } = u;
+  if (phone && firebaseReady && firebase.auth().currentUser) {
+    try {
+      await db.collection('user_secrets').doc(safeUser.id).set({
+        phone,
+        authUid: safeUser.authUid || firebase.auth().currentUser.uid,
+        name: safeUser.name || '',
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (e) {}
+  }
+  return _origSaveUser(safeUser);
+};
+
+// 2. تعديل زرار التسجيل الجديد لحفظ الرقم في المخزن السري فقط
+document.addEventListener('DOMContentLoaded', () => {
+  const regBtn = $('#registerSubmitBtn');
+  if (regBtn) {
+    regBtn.onclick = async () => {
+      const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+      const mail = i => i + '@mcihub.com';
+      const BAD = ['ادمن','أدمن','ليدر','مشرف','دكتور','admin','leader'];
+      const RX = { id: /^(24|25|26)\d{4}$/, name: /^[\u0621-\u064Aa-zA-Z]+( [\u0621-\u064Aa-zA-Z]+){2,}$/, ph: /^01[0125]\d{8}$/, pw: /^(?=.*[A-Za-z\u0621-\u064A])(?=.*\d).{8,}$/ };
+      const g = i => $('#' + i).value, id = g('regId').trim(), nm = norm(g('regName')), ph = g('regPhone').trim(), pw = g('regPass'), br = g('regBranch'), er = $('#regPinErr');
+      const fail = (m) => { er.textContent = m; er.classList.add('show'); };
+      er.classList.remove('show');
+      if (!RX.id.test(id)) return fail('الكود الجامعي 6 أرقام يبدأ بـ 24 أو 25 أو 26');
+      if (nm.length > 30 || !RX.name.test(nm)) return fail('الاسم الثلاثي حروف فقط (3 مقاطع، حتى 30 حرف)');
+      if (BAD.some(b => nm.toLowerCase().includes(b))) return fail('الاسم يحتوي لفظاً غير مسموح');
+      if (!RX.ph.test(ph)) return fail('رقم الموبايل 11 رقم مصري بدون +');
+      if (!RX.pw.test(pw)) return fail('الباسورد 8 خانات على الأقل حروف وأرقام');
+      if (!br) return fail('اختر الشعبة');
+      if (Date.now() - Store.get('lastReg', 0) < 864e5) return fail('مسموح بحساب واحد لكل جهاز كل 24 ساعة');
+      try { if ((await Cloud.getUsers()).some(u => norm(u.name).toLowerCase() === nm.toLowerCase())) return fail('الاسم ده مسجل بالفعل'); } catch (e) {}
+      try {
+        const c = await firebase.auth().createUserWithEmailAndPassword(mail(id), pw);
+        const u = { id, studentId: id, name: nm, branch: br, authUid: c.user.uid, status: 'pending', role: 'student', xp: 0, wrongQuestions: [], createdAt: Date.now() };
+        const batch = db.batch();
+        batch.set(db.collection('users').doc(id), u);
+        batch.set(db.collection('user_secrets').doc(id), { phone: ph, authUid: c.user.uid, name: nm, updatedAt: Date.now() });
+        await batch.commit();
+        Store.set('lastReg', Date.now()); closeModal('registerModal'); setSession(u);
+      } catch (e) { fail(e.code === 'auth/email-already-in-use' ? 'الكود الجامعي ده مسجل بالفعل' : 'تعذر إنشاء الحساب، حاول تاني'); }
+    };
+  }
+
+  // 3. تعديل المرحلة 3 في تحديث الحسابات القديمة لحفظ الرقم في المخزن السري فقط
+  const migBtn3 = $('#migStep3Btn');
+  if (migBtn3) {
+    const origMig3 = migBtn3.onclick;
+    migBtn3.onclick = async () => {
+      const studentId = ($('#migStudentId')?.value || '').trim();
+      const phoneToHide = _migPhoneVal;
+      await origMig3();
+      if (studentId && phoneToHide && firebase.auth().currentUser) {
+        try {
+          await db.collection('user_secrets').doc(studentId).set({
+            phone: phoneToHide,
+            authUid: firebase.auth().currentUser.uid,
+            updatedAt: Date.now()
+          }, { merge: true });
+          await db.collection('users').doc(studentId).update({ phone: firebase.firestore.FieldValue.delete() });
+        } catch (e) {}
+      }
+    };
+  }
+});
+
+// 4. قراءة الأرقام السرية في غرفة الليدر + زرار تنظيف الأرقام القديمة فوراً
+const _iaSec = initAdminDashboard;
+initAdminDashboard = () => {
+  _iaSec();
+  if (!isL()) return;
+
+  // زرار تنظيف ونقل أي أرقام قديمة متبقية في users فوراً
+  if (!$('#scrubPhonesBtn') && $('#adminPanelSite')) {
+    $('#adminPanelSite').insertAdjacentHTML('beforeend', `
+      <div style="height:1px;background:var(--border);margin:20px 0"></div>
+      <div class="admin-section-title">🔒 حماية خصوصية أرقام الدفعة</div>
+      <button class="btn btn-danger" id="scrubPhonesBtn">نقل كل أرقام الدفعة للمخزن السري وحذفها من العلن فوراً</button>
+    `);
+    $('#scrubPhonesBtn').onclick = async () => {
+      const snap = await db.collection('users').get();
+      const batch = db.batch();
+      let count = 0;
+      snap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.phone) {
+          batch.set(db.collection('user_secrets').doc(doc.id), {
+            phone: d.phone,
+            authUid: d.authUid || '',
+            name: d.name || '',
+            migratedAt: Date.now()
+          }, { merge: true });
+          batch.update(doc.ref, { phone: firebase.firestore.FieldValue.delete() });
+          count++;
+        }
+      });
+      if (count === 0) return showToast('كل الأرقام مؤمّنة بالفعل ومفيش أي رقم مكشوف!', 'success');
+      await batch.commit();
+      showToast(`تم نقل وحماية ${count} رقم موبايل في المخزن السري بنجاح!`, 'success', 6000);
+    };
+  }
+
+  // تحديث عرض طلبات الانضمام ليجلب الأرقام من user_secrets لليدر فقط
+  const pendTab = $('#pendTab');
+  if (pendTab) {
+    pendTab.onclick = async () => {
+      $$('.admin-tab').forEach(x => x.classList.remove('active'));
+      pendTab.classList.add('active');
+      $$('.admin-panel').forEach(p => p.classList.remove('active'));
+      $('#adminPanelPending').classList.add('active');
+
+      const [qUsers, qSecrets] = await Promise.all([
+        db.collection('users').where('status', '==', 'pending').get(),
+        db.collection('user_secrets').get()
+      ]);
+      const secretsMap = {};
+      qSecrets.docs.forEach(d => { secretsMap[d.id] = d.data().phone; });
+      const L = qUsers.docs.map(d => d.data());
+
+      $('#pendList').innerHTML = L.length ? L.map(u => `
+        <div class="qbank-item">
+          <div class="qb-q">${escapeHtml(u.name)}</div>
+          <div class="qb-meta">
+            <span class="badge badge-primary">${escapeHtml(u.studentId || u.id)}</span>
+            <span class="badge badge-warning">${escapeHtml(secretsMap[u.id] || u.phone || 'بدون رقم')}</span>
+            <span class="badge badge-success">${escapeHtml(u.branch || '')}</span>
+          </div>
+          <div class="qb-actions">
+            <button class="btn btn-success btn-xs" data-ok="${u.id}">قبول ✅</button>
+            <button class="btn btn-danger btn-xs" data-no="${u.id}">حظر/رفض 🚫</button>
+          </div>
+        </div>
+      `).join('') : '<p class="text-muted">لا توجد طلبات</p>';
+
+      const set = async (id, d) => { await db.collection('users').doc(id).update(d); pendTab.click(); };
+      $$('#pendList [data-ok]').forEach(b => b.onclick = () => set(b.dataset.ok, { status: 'approved' }));
+      $$('#pendList [data-no]').forEach(b => b.onclick = () => set(b.dataset.no, { status: 'banned', banned: true }));
+    };
+  }
+};
+})();
+</script>
+ </body>
 </html>
