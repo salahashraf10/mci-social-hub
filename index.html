@@ -1531,7 +1531,7 @@ const Cloud = (() => {
     const local = Store.get('scores', []);
     local.push(score); Store.set('scores', local);
     if (!firebaseReady) return;
-    try { await db.collection('scores').add({ ...score, createdAt: Date.now() }); setOnline(true); }
+    try { await db.collection('scores').add({ ...score, authUid: AppState.user?.authUid || firebase.auth().currentUser?.uid || '', createdAt: Date.now() }); setOnline(true); }
     catch (e) { setOnline(false); }
   }
   async function getNotifications() {
@@ -2755,7 +2755,7 @@ async function submitExam(auto=false) {
   const result = { subjectId: s.subjectId, subjectName: APP_DATA.subjects[s.subjectId].name, total, correct, pct, grade, elapsedMin, elapsedSec, tabSwitches: s.tabSwitches||0, questions: s.questions, date: new Date().toISOString() };
   
   if (AppState.user?.role === 'student') {
-    await Cloud.saveScore({ userName: AppState.user.name, branch: AppState.user.branch, subjectId: s.subjectId, pct, grade, date: result.date });
+    await Cloud.saveScore({ authUid: AppState.user.authUid, userName: AppState.user.name, branch: AppState.user.branch, subjectId: s.subjectId, pct, grade, date: result.date });
     addXP(Math.round(pct/2) + 10);
   }
   Store.remove('activeExam');
@@ -4435,13 +4435,12 @@ $('#migStep3Btn').onclick = async () => {
     );
 
     const cred = await auth.createUserWithEmailAndPassword(mail(studentId), newPass);
-    const { pin, ...rest } = oldDoc;
+    const { pin, phone, ...rest } = oldDoc;
     const upgradedUser = {
       ...rest,
       id: studentId,
       studentId,
       name: newName,
-      phone: _migPhoneVal,
       authUid: cred.user.uid,
       status: 'approved',
       role: oldDoc.role || 'student',
